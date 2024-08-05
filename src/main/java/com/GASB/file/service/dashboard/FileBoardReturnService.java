@@ -12,7 +12,7 @@ import java.util.List;
 @Service
 public class FileBoardReturnService {
 
-    private FileUploadRepo fileUploadRepo;
+    private final FileUploadRepo fileUploadRepo;
 
     @Autowired
     public FileBoardReturnService(FileUploadRepo fileUploadRepo){
@@ -20,19 +20,17 @@ public class FileBoardReturnService {
     }
 
     public FileDashboardDto boardListReturn(long org_saas_id){
-        // 가상의 데이터를 사용하여 FileDashboardDto를 생성합니다.
         int totalCount = totalFilesCount(org_saas_id);
         double totalVolume = totalFileSizeCount(org_saas_id);
-        int totalDlp = 5;
-        int totalMalware = 2;
+        int totalDlp = totalDlpCount(org_saas_id);
+        int totalMalware = totalMalwareCount(org_saas_id);
 
-        // TotalTypeDto와 StatisticsDto의 리스트를 생성
-        List<TotalTypeDto> totalTypeDtos = List.of(
+        List<TotalTypeDto> totalType = List.of(
                 new TotalTypeDto("Type1", 50),
                 new TotalTypeDto("Type2", 50)
         );
 
-        List<StatisticsDto> statisticsDtos = List.of(
+        List<StatisticsDto> statistics = List.of(
                 new StatisticsDto("2024-01-01", 2.3f, 30),
                 new StatisticsDto("2024-01-02", 4.0f, 24)
         );
@@ -43,8 +41,8 @@ public class FileBoardReturnService {
                 .total_volume(totalVolume)
                 .total_dlp(totalDlp)
                 .total_malware(totalMalware)
-                .total_type(totalTypeDtos)
-                .statistics(statisticsDtos)
+                .total_type(totalType)
+                .statistics(statistics)
                 .build();
     }
 
@@ -56,5 +54,13 @@ public class FileBoardReturnService {
         double totalSizeInBytes = fileUploadRepo.sumFileSizeByOrgSaasId(org_saas_id);
         double totalSizeInGB = totalSizeInBytes / 1_073_741_824.0;
         return Math.round(totalSizeInGB * 1000) / 1000.0;
+    }
+
+    private int totalDlpCount(long org_saas_id){
+        return fileUploadRepo.countDlpReportsByOrgSaasId(org_saas_id);
+    }
+
+    private int totalMalwareCount(long org_saas_id){
+        return fileUploadRepo.countVtReportsByOrgSaasId(org_saas_id);
     }
 }

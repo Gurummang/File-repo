@@ -16,7 +16,7 @@ public class DlpReport {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @ManyToOne
+    @OneToOne
     @JoinColumn(name = "file_id", nullable = false, referencedColumnName = "id")
     private StoredFile storedFile;
 

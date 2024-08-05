@@ -14,19 +14,33 @@ import java.util.Optional;
 
 @Repository
 public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
-    Optional<FileUpload> findBySaasFileId(String saasFileId);
-    List<FileUpload> findTop10ByOrderByTimestampDesc();
-    List<FileUpload> findByOrgSaaS(OrgSaaS orgSaaS);
-    List<FileUpload> findByOrgSaaSInOrderByTimestampDesc(List<OrgSaaS> orgSaaSList);
-    List<FileUpload> findTop10ByOrgSaaSInOrderByTimestampDesc(List<OrgSaaS> orgSaasList);
+//    Optional<FileUpload> findBySaasFileId(String saasFileId);
+//    List<FileUpload> findTop10ByOrderByTimestampDesc();
+//    List<FileUpload> findByOrgSaaS(OrgSaaS orgSaaS);
+//    List<FileUpload> findByOrgSaaSInOrderByTimestampDesc(List<OrgSaaS> orgSaaSList);
+//    List<FileUpload> findTop10ByOrgSaaSInOrderByTimestampDesc(List<OrgSaaS> orgSaasList);
     @Query("SELECT COUNT(f) FROM FileUpload f WHERE f.orgSaaS.id = :orgSaasId")
     int countByOrgSaasId(@Param("orgSaasId") Long orgSaasId);
 
     @Query("SELECT SUM(sf.size) FROM FileUpload fu JOIN fu.storedFile sf WHERE fu.orgSaaS.id = :orgSaasId")
     double sumFileSizeByOrgSaasId(@Param("orgSaasId") Long orgSaasId);
 
+    @Query("SELECT COUNT(fu) " +
+            "FROM FileUpload fu " +
+            "JOIN fu.storedFile sf " +
+            "JOIN sf.vtReport vr " +
+            "WHERE vr.threatLabel != 'none' AND fu.orgSaaS.id = :orgSaasId")
+    int countVtReportsByOrgSaasId(@Param("orgSaasId") Long orgSaasId);
+
+    @Query("SELECT COUNT(fu) " +
+            "FROM FileUpload fu " +
+            "JOIN fu.storedFile sf " +
+            "JOIN sf.dlpReport dr " +
+            "WHERE dr.dlp = true AND fu.orgSaaS.id = :orgSaasId")
+    int countDlpReportsByOrgSaasId(@Param("orgSaasId") Long orgSaasId);
+
     // Corrected method to find by OrgSaaS fields
 
-    Optional<FileUpload> findBySaasFileIdAndTimestamp(String saasFileId, LocalDateTime timestamp);
-    List<FileUpload> findTop10ByOrgSaaS_Org_IdAndOrgSaaS_SaasOrderByTimestampDesc(int orgId, SaaS saas);
+//    Optional<FileUpload> findBySaasFileIdAndTimestamp(String saasFileId, LocalDateTime timestamp);
+//    List<FileUpload> findTop10ByOrgSaaS_Org_IdAndOrgSaaS_SaasOrderByTimestampDesc(int orgId, SaaS saas);
 }
