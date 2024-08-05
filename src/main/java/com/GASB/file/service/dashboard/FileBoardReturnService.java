@@ -28,10 +28,7 @@ public class FileBoardReturnService {
         int totalDlp = totalDlpCount(org_id);
         int totalMalware = totalMalwareCount(org_id);
 
-        List<TotalTypeDto> totalType = List.of(
-                new TotalTypeDto("Type1", 50),
-                new TotalTypeDto("Type2", 50)
-        );
+        List<TotalTypeDto> totalType = getFileTypeDistribution(org_id);
 
         List<StatisticsDto> statistics = List.of(
                 new StatisticsDto("2024-01-01", 2.3f, 30),
@@ -65,5 +62,10 @@ public class FileBoardReturnService {
 
     private int totalMalwareCount(long org_id){
         return fileUploadRepo.countVtMalwareByOrgId(org_id) + fileUploadRepo.countSuspiciousMalwareByOrgId(org_id);
+    }
+
+    private List<TotalTypeDto> getFileTypeDistribution(long orgId) {
+        // 리포지토리 메서드를 호출하여 파일 타입 분포를 가져옴
+        return fileUploadRepo.findFileTypeDistributionByOrgId(orgId);
     }
 }
