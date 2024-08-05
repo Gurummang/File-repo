@@ -4,9 +4,7 @@ import com.GASB.file.model.dto.response.dashboard.FileDashboardDto;
 import com.GASB.file.model.dto.response.list.ResponseDto;
 import com.GASB.file.service.dashboard.FileBoardReturnService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/files")
@@ -23,9 +21,9 @@ public class FileController {
         return "Hello, file world !!";
     }
 
-    @GetMapping("/board")
-    public ResponseDto<FileDashboardDto> fileDashboardList(){
-        FileDashboardDto fileDashboard = fileBoardReturnService.boardListReturn();
+    @PostMapping("/board")
+    public ResponseDto<FileDashboardDto> fileDashboardList(@RequestBody long org_saas_id){
+        FileDashboardDto fileDashboard = fileBoardReturnService.boardListReturn(org_saas_id);
         return ResponseDto.ofSuccess(fileDashboard);
     }
 }

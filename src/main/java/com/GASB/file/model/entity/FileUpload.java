@@ -31,4 +31,8 @@ public class FileUpload {
 
     @Column(name = "upload_ts", nullable = false)
     private LocalDateTime timestamp;
+
+    @ManyToOne
+    @JoinColumn(name = "salted_hash", referencedColumnName = "salted_hash", insertable = false, updatable = false)
+    private StoredFile storedFile;
 }
