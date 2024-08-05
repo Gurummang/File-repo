@@ -1,5 +1,6 @@
 package com.GASB.file.repository.file;
 
+import com.GASB.file.model.dto.response.dashboard.TotalTypeDto;
 import com.GASB.file.model.entity.FileUpload;
 import com.GASB.file.model.entity.OrgSaaS;
 import com.GASB.file.model.entity.SaaS;
@@ -56,6 +57,14 @@ public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
             "JOIN sf.dlpReport dr " +
             "WHERE fu.deleted = false AND dr.dlp = true AND os.org.id = :orgId")
     int countDlpIssuesByOrgId(@Param("orgId") Long orgId);
+
+    @Query("SELECT new com.GASB.file.model.dto.response.dashboard.TotalTypeDto(sf.type, COUNT(sf)) " +
+            "FROM FileUpload fu " +
+            "JOIN fu.storedFile sf " +
+            "JOIN fu.orgSaaS os " +
+            "WHERE os.org.id = :orgId AND fu.deleted = false " +
+            "GROUP BY sf.type")
+    List<TotalTypeDto> findFileTypeDistributionByOrgId(@Param("orgId") Long orgId);
 
     // Corrected method to find by OrgSaaS fields
 
