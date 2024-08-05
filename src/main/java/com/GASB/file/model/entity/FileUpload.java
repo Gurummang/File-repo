@@ -1,5 +1,6 @@
 package com.GASB.file.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,7 +33,15 @@ public class FileUpload {
     @Column(name = "upload_ts", nullable = false)
     private LocalDateTime timestamp;
 
+    @Builder.Default
+    @Column(name = "deleted")
+    private boolean deleted = false;
+
     @ManyToOne
     @JoinColumn(name = "salted_hash", referencedColumnName = "salted_hash", insertable = false, updatable = false)
     private StoredFile storedFile;
+
+    @JsonIgnore
+    @OneToOne(mappedBy = "fileUpload", cascade = CascadeType.ALL)
+    private TypeScan typeScan;
 }

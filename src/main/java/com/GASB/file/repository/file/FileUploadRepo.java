@@ -19,25 +19,43 @@ public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
 //    List<FileUpload> findByOrgSaaS(OrgSaaS orgSaaS);
 //    List<FileUpload> findByOrgSaaSInOrderByTimestampDesc(List<OrgSaaS> orgSaaSList);
 //    List<FileUpload> findTop10ByOrgSaaSInOrderByTimestampDesc(List<OrgSaaS> orgSaasList);
-    @Query("SELECT COUNT(f) FROM FileUpload f WHERE f.orgSaaS.id = :orgSaasId")
-    int countByOrgSaasId(@Param("orgSaasId") Long orgSaasId);
 
-    @Query("SELECT SUM(sf.size) FROM FileUpload fu JOIN fu.storedFile sf WHERE fu.orgSaaS.id = :orgSaasId")
-    double sumFileSizeByOrgSaasId(@Param("orgSaasId") Long orgSaasId);
+    @Query("SELECT COUNT(fu.id) FROM FileUpload fu JOIN OrgSaaS os ON fu.orgSaaS.id = os.id WHERE fu.deleted = false AND os.org.id = :orgId")
+    int countFileByOrgId(@Param("orgId") Long orgId);
 
-    @Query("SELECT COUNT(fu) " +
-            "FROM FileUpload fu " +
-            "JOIN fu.storedFile sf " +
-            "JOIN sf.vtReport vr " +
-            "WHERE vr.threatLabel != 'none' AND fu.orgSaaS.id = :orgSaasId")
-    int countVtReportsByOrgSaasId(@Param("orgSaasId") Long orgSaasId);
+    @Query("SELECT SUM(sf.size) FROM FileUpload fu " +
+            "JOIN StoredFile sf ON fu.hash = sf.saltedHash " +
+            "JOIN OrgSaaS os ON fu.orgSaaS.id = os.id " +
+            "WHERE fu.deleted = false AND os.org.id = :orgId")
+    Long getTotalSizeByOrgId(@Param("orgId") long orgId);
 
     @Query("SELECT COUNT(fu) " +
             "FROM FileUpload fu " +
+            "JOIN fu.orgSaaS os " +
+            "LEFT JOIN fu.storedFile sf " +
+            "LEFT JOIN sf.vtReport vr " +
+            "WHERE fu.deleted = false AND vr.threatLabel != 'none' AND os.org.id = :orgId")
+    int countVtMalwareByOrgId(@Param("orgId") Long orgId);
+
+    @Query("SELECT COUNT(fu) " +
+            "FROM FileUpload fu " +
+            "JOIN fu.orgSaaS os " +
+            "LEFT JOIN fu.storedFile sf " +
+            "LEFT JOIN fu.typeScan ts " +
+            "LEFT JOIN sf.scanTable gs " +
+            "LEFT JOIN sf.vtReport vr " +
+            "WHERE fu.deleted = false " +
+            "  AND (vr IS NULL AND (ts.correct = false OR gs.detected = true)) " +
+            "  AND os.org.id = :orgId")
+    int countSuspiciousMalwareByOrgId(@Param("orgId") Long orgId);
+
+    @Query("SELECT COUNT(fu) " +
+            "FROM FileUpload fu " +
+            "JOIN fu.orgSaaS os " +
             "JOIN fu.storedFile sf " +
             "JOIN sf.dlpReport dr " +
-            "WHERE dr.dlp = true AND fu.orgSaaS.id = :orgSaasId")
-    int countDlpReportsByOrgSaasId(@Param("orgSaasId") Long orgSaasId);
+            "WHERE fu.deleted = false AND dr.dlp = true AND os.org.id = :orgId")
+    int countDlpIssuesByOrgId(@Param("orgId") Long orgId);
 
     // Corrected method to find by OrgSaaS fields
 
