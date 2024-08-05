@@ -3,7 +3,9 @@ package com.GASB.file.service.dashboard;
 import com.GASB.file.model.dto.response.dashboard.FileDashboardDto;
 import com.GASB.file.model.dto.response.dashboard.StatisticsDto;
 import com.GASB.file.model.dto.response.dashboard.TotalTypeDto;
+import com.GASB.file.model.entity.OrgSaaS;
 import com.GASB.file.repository.file.FileUploadRepo;
+import com.GASB.file.repository.org.OrgSaaSRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,11 +21,12 @@ public class FileBoardReturnService {
         this.fileUploadRepo = fileUploadRepo;
     }
 
-    public FileDashboardDto boardListReturn(long org_saas_id){
-        int totalCount = totalFilesCount(org_saas_id);
-        double totalVolume = totalFileSizeCount(org_saas_id);
-        int totalDlp = totalDlpCount(org_saas_id);
-        int totalMalware = totalMalwareCount(org_saas_id);
+    public FileDashboardDto boardListReturn(long org_id){
+
+        int totalCount = totalFilesCount(org_id);
+        double totalVolume = totalFileSizeCount(org_id);
+        int totalDlp = totalDlpCount(org_id);
+        int totalMalware = totalMalwareCount(org_id);
 
         List<TotalTypeDto> totalType = List.of(
                 new TotalTypeDto("Type1", 50),
@@ -46,21 +49,21 @@ public class FileBoardReturnService {
                 .build();
     }
 
-    private int totalFilesCount(long org_saas_id){
-        return fileUploadRepo.countByOrgSaasId(org_saas_id);
+    private int totalFilesCount(long org_id){
+        return fileUploadRepo.countFileByOrgId(org_id);
     }
 
-    private double totalFileSizeCount(long org_saas_id){
-        double totalSizeInBytes = fileUploadRepo.sumFileSizeByOrgSaasId(org_saas_id);
+    private double totalFileSizeCount(long org_id){
+        double totalSizeInBytes = fileUploadRepo.getTotalSizeByOrgId(org_id);
         double totalSizeInGB = totalSizeInBytes / 1_073_741_824.0;
         return Math.round(totalSizeInGB * 1000) / 1000.0;
     }
 
-    private int totalDlpCount(long org_saas_id){
-        return fileUploadRepo.countDlpReportsByOrgSaasId(org_saas_id);
+    private int totalDlpCount(long org_id){
+        return fileUploadRepo.countDlpIssuesByOrgId(org_id);
     }
 
-    private int totalMalwareCount(long org_saas_id){
-        return fileUploadRepo.countVtReportsByOrgSaasId(org_saas_id);
+    private int totalMalwareCount(long org_id){
+        return fileUploadRepo.countVtMalwareByOrgId(org_id) + fileUploadRepo.countSuspiciousMalwareByOrgId(org_id);
     }
 }

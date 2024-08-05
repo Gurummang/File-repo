@@ -3,6 +3,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -42,4 +44,7 @@ public class StoredFile {
     @JsonIgnore
     @OneToOne(mappedBy = "storedFile", cascade = CascadeType.ALL)
     private DlpReport dlpReport;
+
+    @OneToMany(mappedBy = "storedFile")
+    private List<FileUpload> fileUploads;
 }
