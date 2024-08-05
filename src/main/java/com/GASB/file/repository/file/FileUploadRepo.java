@@ -4,6 +4,8 @@ import com.GASB.file.model.entity.FileUpload;
 import com.GASB.file.model.entity.OrgSaaS;
 import com.GASB.file.model.entity.SaaS;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -17,7 +19,11 @@ public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
     List<FileUpload> findByOrgSaaS(OrgSaaS orgSaaS);
     List<FileUpload> findByOrgSaaSInOrderByTimestampDesc(List<OrgSaaS> orgSaaSList);
     List<FileUpload> findTop10ByOrgSaaSInOrderByTimestampDesc(List<OrgSaaS> orgSaasList);
+    @Query("SELECT COUNT(f) FROM FileUpload f WHERE f.orgSaaS.id = :orgSaasId")
+    int countByOrgSaasId(@Param("orgSaasId") Long orgSaasId);
 
+    @Query("SELECT SUM(sf.size) FROM FileUpload fu JOIN fu.storedFile sf WHERE fu.orgSaaS.id = :orgSaasId")
+    double sumFileSizeByOrgSaasId(@Param("orgSaasId") Long orgSaasId);
 
     // Corrected method to find by OrgSaaS fields
 
