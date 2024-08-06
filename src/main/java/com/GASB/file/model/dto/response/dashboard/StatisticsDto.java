@@ -11,11 +11,11 @@ import lombok.Setter;
 @Builder
 public class StatisticsDto {
     private String date;
-    private double volume;
+    private int volume;
     private int count;
 
     @Builder
-    public StatisticsDto(String date, double volume, int count){
+    public StatisticsDto(String date, int volume, int count){
         this.date = date;
         this.volume = volume;
         this.count = count;

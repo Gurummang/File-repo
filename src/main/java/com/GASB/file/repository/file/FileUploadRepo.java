@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -22,7 +23,7 @@ public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
 //    List<FileUpload> findTop10ByOrgSaaSInOrderByTimestampDesc(List<OrgSaaS> orgSaasList);
 
     @Query("SELECT COUNT(fu.id) FROM FileUpload fu JOIN OrgSaaS os ON fu.orgSaaS.id = os.id WHERE fu.deleted = false AND os.org.id = :orgId")
-    int countFileByOrgId(@Param("orgId") Long orgId);
+    Long countFileByOrgId(@Param("orgId") Long orgId);
 
     @Query("SELECT SUM(sf.size) FROM FileUpload fu " +
             "JOIN StoredFile sf ON fu.hash = sf.saltedHash " +
@@ -65,6 +66,19 @@ public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
             "WHERE os.org.id = :orgId AND fu.deleted = false " +
             "GROUP BY sf.type")
     List<TotalTypeDto> findFileTypeDistributionByOrgId(@Param("orgId") Long orgId);
+
+    @Query("SELECT fu.timestamp AS date, SUM(sf.size) AS totalSize, COUNT(fu) AS fileCount " +
+            "FROM FileUpload fu " +
+            "JOIN fu.storedFile sf " +
+            "JOIN fu.orgSaaS os " +
+            "WHERE os.org.id = :orgId AND fu.timestamp BETWEEN :startDate AND :endDate " +
+            "GROUP BY fu.timestamp")
+    List<Object[]> findStatistics(
+            @Param("orgId") long orgId,
+            @Param("startDate") LocalDateTime startDateTime,
+            @Param("endDate") LocalDateTime endDateTime
+    );
+
 
     // Corrected method to find by OrgSaaS fields
 
