@@ -14,7 +14,9 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -74,36 +76,50 @@ public class FileBoardReturnService {
     }
 
     public List<StatisticsDto> getFileStatisticsMonth(long orgId) {
-        List<LocalDate> last30Days = getLast30Days();
-        LocalDate startDate = last30Days.get(0);
-        LocalDate endDate = last30Days.get(last30Days.size() - 1);
-
-        // 시작 시간과 끝 시간을 설정하여 날짜 부분만 비교
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        List<LocalDate> allDates = getLast30Days();
+        LocalDateTime startDateTime = allDates.get(0).atStartOfDay();
+        LocalDateTime endDateTime = allDates.get(allDates.size() - 1).atTime(LocalTime.MAX);
 
         List<Object[]> results = fileUploadRepo.findStatistics(orgId, startDateTime, endDateTime);
 
-        return last30Days.stream()
-                .map(date -> {
-                    Object[] row = results.stream()
-                            .filter(result -> {
-                                LocalDateTime resultDate = (LocalDateTime) result[0];
-                                return resultDate.toLocalDate().equals(date);
-                            })
-                            .findFirst()
-                            .orElse(new Object[]{date.atStartOfDay(), 0.0, 0});
-                    int totalSizeInBytes = ((Number) row[1]).intValue();
-                    int fileCount = ((Number) row[2]).intValue();
+        // 날짜별로 집계
+        Map<LocalDate, StatisticsDto> statisticsMap = new HashMap<>();
 
-                    return new StatisticsDto(
+        for (Object[] row : results) {
+            // 결과에서 날짜와 집계 값 추출
+            LocalDateTime timestamp = (LocalDateTime) row[0];
+            LocalDate date = timestamp.toLocalDate();
+            long totalSizeInBytes = ((Number) row[1]).longValue();
+            long fileCount = ((Number) row[2]).longValue();
+
+            // 날짜별로 통계 집계
+            StatisticsDto dto = statisticsMap.getOrDefault(date, new StatisticsDto(
+                    date.format(dateFormatter),
+                    0,
+                    0
+            ));
+
+            dto.setCount(dto.getCount() + (int) fileCount);
+            dto.setVolume(dto.getVolume() + totalSizeInBytes);
+
+            statisticsMap.put(date, dto);
+        }
+
+        // 모든 날짜를 포함하도록 날짜 범위와 매핑된 데이터를 결합
+        List<StatisticsDto> resultStatistics = allDates.stream()
+                .map(date -> {
+                    StatisticsDto dto = statisticsMap.getOrDefault(date, new StatisticsDto(
                             date.format(dateFormatter),
-                            totalSizeInBytes,
-                            fileCount
-                    );
+                            0,
+                            0
+                    ));
+                    return dto;
                 })
                 .collect(Collectors.toList());
+
+        return resultStatistics;
     }
+
 
     public List<LocalDate> getLast30Days() {
         List<LocalDate> dates = new ArrayList<>();
@@ -117,4 +133,5 @@ public class FileBoardReturnService {
 
         return dates;
     }
+
 }
