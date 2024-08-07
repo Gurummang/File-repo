@@ -1,5 +1,6 @@
 package com.GASB.file.controller.list;
 
+import com.GASB.file.model.dto.request.OrgIdRequest;
 import com.GASB.file.model.dto.response.dashboard.FileDashboardDto;
 import com.GASB.file.model.dto.response.list.ResponseDto;
 import com.GASB.file.service.dashboard.FileBoardReturnService;
@@ -22,8 +23,9 @@ public class FileController {
     }
 
     @PostMapping("/board")
-    public ResponseDto<FileDashboardDto> fileDashboardList(@RequestBody long org_saas_id){
-        FileDashboardDto fileDashboard = fileBoardReturnService.boardListReturn(org_saas_id);
+    public ResponseDto<FileDashboardDto> fileDashboardList(@RequestBody OrgIdRequest orgIdRequest){
+        long org_id = orgIdRequest.getOrg_id();
+        FileDashboardDto fileDashboard = fileBoardReturnService.boardListReturn(org_id);
         return ResponseDto.ofSuccess(fileDashboard);
     }
 }
