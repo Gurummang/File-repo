@@ -21,6 +21,7 @@ public class FileHistoryService {
             String SaaS = "SampleSaaS";
             String eventType = "UPLOAD";
             String fileName = "example-file-" + i + ".txt";
+            String saasFileId = "FK12354";
             LocalDateTime uploadTs = LocalDateTime.now().minusDays(i);
             LocalDateTime eventTs = LocalDateTime.now();
             String email = "user" + i + "@example.com";
@@ -35,6 +36,7 @@ public class FileHistoryService {
                     .saas(SaaS)
                     .eventType(eventType)
                     .fileName(fileName)
+                    .saasFileId(saasFileId)
                     .uploadTs(uploadTs)
                     .eventTs(eventTs)
                     .email(email)

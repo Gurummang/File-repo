@@ -14,6 +14,7 @@ public class FileHistoryDto {
     private String saas;
     private String eventType;
     private String fileName;
+    private String saasFileId;
     private LocalDateTime uploadTs;
     private LocalDateTime eventTs;
     private String email;
