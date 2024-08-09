@@ -1,10 +1,10 @@
 package com.GASB.file.controller.list;
 
 import com.GASB.file.config.rabbitmq.RabbitMQProperties;
+import com.GASB.file.model.dto.request.EventIdRequest;
 import com.GASB.file.model.dto.request.OrgIdRequest;
 import com.GASB.file.model.dto.response.dashboard.FileDashboardDto;
-import com.GASB.file.model.dto.response.history.FileHistoryDto;
-import com.GASB.file.model.dto.response.history.FileHistoryTotalDto;
+import com.GASB.file.model.dto.response.history.*;
 import com.GASB.file.model.dto.response.list.ResponseDto;
 import com.GASB.file.service.dashboard.FileBoardReturnService;
 import com.GASB.file.service.history.FileHistoryService;
@@ -46,11 +46,18 @@ public class FileController {
     }
 
     @GetMapping("/history")
-    public ResponseDto<List<FileHistoryDto>> fileHistoryList(@RequestBody OrgIdRequest orgIdRequest){
+    public ResponseDto<List<FileHistoryListDto>> fileHistoryList(@RequestBody OrgIdRequest orgIdRequest){
         long orgId = orgIdRequest.getOrgId();
-        List<FileHistoryDto> fileHistory = fileHistoryService.historyListReturn(orgId);
+        List<FileHistoryListDto> fileHistory = fileHistoryService.historyListReturn(orgId);
         // rabbitTemplate.convertAndSend(properties.getGroupingRoutingKey(),orgId);
         return ResponseDto.ofSuccess(fileHistory);
+    }
+
+    @PostMapping("/history")
+    public ResponseDto<FileHistoryBySaaS> fileHistoryGroupReturn(@RequestBody EventIdRequest eventIdRequest){
+        long eventId = eventIdRequest.getEventId();
+        FileHistoryBySaaS fileHistoryCorrelationsInfo = fileHistoryService.createFileHistoryCorrelations(eventId);
+        return ResponseDto.ofSuccess(fileHistoryCorrelationsInfo);
     }
 
     @GetMapping("/history/statistics")

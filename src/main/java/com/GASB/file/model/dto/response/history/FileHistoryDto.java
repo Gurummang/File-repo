@@ -3,7 +3,6 @@ package com.GASB.file.model.dto.response.history;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Getter
 @NoArgsConstructor
@@ -19,5 +18,4 @@ public class FileHistoryDto {
     private LocalDateTime eventTs;
     private String email;
     private String uploadChannel;
-    private List<FileHistoryCorrelation> correlation;
 }
