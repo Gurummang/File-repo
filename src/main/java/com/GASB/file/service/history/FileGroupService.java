@@ -70,9 +70,10 @@ public class FileGroupService {
         // 3. orgSaas 조회
         OrgSaaS orgSaaS = monitoredUsers.getOrgSaaS();
         // 4. orgId 조회
-        Org org = orgSaaS.getOrg();
-        // 5. activities객체의 orgId
-        long orgId = org.getId();
+        long orgId = orgSaaS.getOrg().getId();
+//        Org org = orgSaaS.getOrg();
+//        // 5. activities객체의 orgId
+//        long orgId = org.getId();
         System.out.println("orgId: " + orgId);
 
         // activities 테이블의 모든 튜플 리스팅
@@ -85,7 +86,7 @@ public class FileGroupService {
                         return false;
                     }
                     OrgSaaS otherOrgSaaS = otherMonitoredUsers.getOrgSaaS();
-                    Org otherOrg = otherOrgSaaS.getOrg();
+//                    Org otherOrg = otherOrgSaaS.getOrg();
                     return otherOrgSaaS != null && otherOrgSaaS.getOrg().getId() == orgId;
                 })
                 .collect(Collectors.toList());
