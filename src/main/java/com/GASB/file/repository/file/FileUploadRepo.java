@@ -16,11 +16,6 @@ import java.util.Optional;
 
 @Repository
 public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
-//    Optional<FileUpload> findBySaasFileId(String saasFileId);
-//    List<FileUpload> findTop10ByOrderByTimestampDesc();
-//    List<FileUpload> findByOrgSaaS(OrgSaaS orgSaaS);
-//    List<FileUpload> findByOrgSaaSInOrderByTimestampDesc(List<OrgSaaS> orgSaaSList);
-//    List<FileUpload> findTop10ByOrgSaaSInOrderByTimestampDesc(List<OrgSaaS> orgSaasList);
 
     @Query("SELECT COUNT(fu.id) FROM FileUpload fu JOIN OrgSaaS os ON fu.orgSaaS.id = os.id WHERE fu.deleted = false AND os.org.id = :orgId")
     Long countFileByOrgId(@Param("orgId") Long orgId);
@@ -78,11 +73,4 @@ public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
             @Param("startDate") LocalDateTime startDateTime,
             @Param("endDate") LocalDateTime endDateTime
     );
-
-
-
-    // Corrected method to find by OrgSaaS fields
-
-//    Optional<FileUpload> findBySaasFileIdAndTimestamp(String saasFileId, LocalDateTime timestamp);
-//    List<FileUpload> findTop10ByOrgSaaS_Org_IdAndOrgSaaS_SaasOrderByTimestampDesc(int orgId, SaaS saas);
 }

@@ -40,8 +40,8 @@ public class FileController {
 
     @PostMapping("/board")
     public ResponseDto<FileDashboardDto> fileDashboardList(@RequestBody OrgIdRequest orgIdRequest){
-        long org_id = orgIdRequest.getOrgId();
-        FileDashboardDto fileDashboard = fileBoardReturnService.boardListReturn(org_id);
+        long orgId = orgIdRequest.getOrgId();
+        FileDashboardDto fileDashboard = fileBoardReturnService.boardListReturn(orgId);
         return ResponseDto.ofSuccess(fileDashboard);
     }
 
@@ -54,8 +54,9 @@ public class FileController {
     }
 
     @GetMapping("/history/statistics")
-    public ResponseDto<FileHistoryTotalDto> fileHistoryStatisticsList(){
-        FileHistoryTotalDto fileHistoryStatistics = fileHistoryStatisticsService.eventStatistics();
+    public ResponseDto<FileHistoryTotalDto> fileHistoryStatisticsList(@RequestBody OrgIdRequest orgIdRequest){
+        long orgId = orgIdRequest.getOrgId();
+        FileHistoryTotalDto fileHistoryStatistics = fileHistoryStatisticsService.eventStatistics(orgId);
         return ResponseDto.ofSuccess(fileHistoryStatistics);
     }
 }
