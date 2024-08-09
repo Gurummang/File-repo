@@ -46,9 +46,9 @@ public class FileController {
     }
 
     @GetMapping("/history")
-    public ResponseDto<List<FileHistoryDto>> fileHistoryList(){
-        //long orgId = orgIdRequest.getOrgId(); // @RequestBody OrgIdRequest orgIdRequest
-        List<FileHistoryDto> fileHistory = fileHistoryService.historyListReturn();
+    public ResponseDto<List<FileHistoryDto>> fileHistoryList(@RequestBody OrgIdRequest orgIdRequest){
+        long orgId = orgIdRequest.getOrgId();
+        List<FileHistoryDto> fileHistory = fileHistoryService.historyListReturn(orgId);
         // rabbitTemplate.convertAndSend(properties.getGroupingRoutingKey(),orgId);
         return ResponseDto.ofSuccess(fileHistory);
     }
