@@ -164,41 +164,4 @@ public class FileGroupService {
             }
         }
     }
-
-    public List<FileHistoryCorrelation> getFileGroupingData() {
-        // 데이터베이스에서 그룹화된 파일 정보 조회
-        List<FileGroup> fileGroups = fileGroupRepo.findAll();
-
-        // file_group과 activities 테이블을 조인하여 그룹화된 파일 정보를 생성
-        Map<String, List<FileHistoryCorrelation>> groupedFiles = fileGroups.stream()
-                .collect(Collectors.groupingBy(
-                        FileGroup::getGroupName,
-                        Collectors.mapping(
-                                fileGroup -> {
-                                    // activities 테이블에서 파일 정보를 조회
-                                    Activities activity = activitiesRepo.findById(fileGroup.getId()).orElse(null);
-                                    if (activity != null) {
-                                        // FileHistoryCorrelation 객체 생성
-                                        return FileHistoryCorrelation.builder()
-                                                .eventId(activity.getId())
-                                                .saas("SampleSaaS") // 필요시 실제 값을 넣으세요
-                                                .eventType(activity.getEventType())
-                                                .fileName(activity.getFileName())
-                                                .saasFileId(activity.getSaasFileId())
-                                                .eventTs(activity.getEventTs())
-                                                .email("SampleEmail") // 필요시 실제 값을 넣으세요
-                                                .uploadChannel(activity.getUploadChannel())
-                                                .build();
-                                    }
-                                    return null;
-                                },
-                                Collectors.toList()
-                        )
-                ));
-
-        // 결과를 List<FileHistoryCorrelation> 형태로 변환하여 반환
-        return groupedFiles.entrySet().stream()
-                .flatMap(entry -> entry.getValue().stream())
-                .collect(Collectors.toList());
-    }
 }
