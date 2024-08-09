@@ -14,7 +14,7 @@ import java.util.List;
 public class FileHistoryTotalDto {
     private int totalUpload;
     private int totalDeleted;
-    private int totalModify;
+    private int totalChanged;
     private int totalMoved;
     private List<FileHistoryStatistics> fileHistoryStatistics;
 }
