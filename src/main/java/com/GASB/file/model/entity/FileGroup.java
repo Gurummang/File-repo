@@ -20,4 +20,9 @@ public class FileGroup {
 
     @Column(columnDefinition = "TEXT")
     private String groupName;
+
+    public FileGroup(Long id, String groupName) {
+        this.id = id;
+        this.groupName = groupName;
+    }
 }
