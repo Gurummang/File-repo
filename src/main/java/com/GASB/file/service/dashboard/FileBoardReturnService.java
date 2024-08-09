@@ -42,11 +42,11 @@ public class FileBoardReturnService {
 
         // FileDashboardDto 객체를 생성하고 반환
         return FileDashboardDto.builder()
-                .total_count(totalCount)
-                .total_volume(totalVolume)
-                .total_dlp(totalDlp)
-                .total_malware(totalMalware)
-                .total_type(totalType)
+                .totalCount(totalCount)
+                .totalVolume(totalVolume)
+                .totalDlp(totalDlp)
+                .totalMalware(totalMalware)
+                .totalType(totalType)
                 .statistics(statistics)
                 .build();
     }

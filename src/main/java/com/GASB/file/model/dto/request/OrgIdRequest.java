@@ -10,9 +10,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @Builder
 public class OrgIdRequest {
-        private long org_id;
+        private long orgId;
 
-        public OrgIdRequest(long org_id){
-                this.org_id = org_id;
+        public OrgIdRequest(long orgId){
+                this.orgId = orgId;
         }
 }

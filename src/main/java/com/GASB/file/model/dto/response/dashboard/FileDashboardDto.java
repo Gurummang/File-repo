@@ -12,20 +12,20 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 public class FileDashboardDto {
-    private long total_count;
-    private long total_volume;
-    private int total_dlp;
-    private int total_malware;
-    private List<TotalTypeDto> total_type;
+    private long totalCount;
+    private long totalVolume;
+    private int totalDlp;
+    private int totalMalware;
+    private List<TotalTypeDto> totalType;
     private List<StatisticsDto> statistics;
 
     @Builder
     public FileDashboardDto(long total_count, long total_volume, int total_dlp, int total_malware, List<TotalTypeDto> total_type, List<StatisticsDto> statistics){
-        this.total_count = total_count;
-        this.total_volume = total_volume;
-        this.total_dlp = total_dlp;
-        this.total_malware = total_malware;
-        this.total_type = total_type;
+        this.totalCount = total_count;
+        this.totalVolume = total_volume;
+        this.totalDlp = total_dlp;
+        this.totalMalware = total_malware;
+        this.totalType = total_type;
         this.statistics = statistics;
     }
 }
