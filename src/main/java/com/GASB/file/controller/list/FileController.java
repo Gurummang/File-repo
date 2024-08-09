@@ -7,8 +7,10 @@ import com.GASB.file.model.dto.response.dashboard.FileDashboardDto;
 import com.GASB.file.model.dto.response.history.*;
 import com.GASB.file.model.dto.response.list.ResponseDto;
 import com.GASB.file.service.dashboard.FileBoardReturnService;
+import com.GASB.file.service.history.FileGroupService;
 import com.GASB.file.service.history.FileHistoryService;
 import com.GASB.file.service.history.FileHistoryStatisticsService;
+import com.GASB.file.service.rabbitmq.RabbitMQListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -24,14 +26,16 @@ public class FileController {
     private final FileHistoryStatisticsService fileHistoryStatisticsService;
     private final RabbitTemplate rabbitTemplate;
     private final RabbitMQProperties properties;
+    private final RabbitMQListener rabbitMQListener;
 
     @Autowired
-    public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService, RabbitTemplate rabbitTemplate, RabbitMQProperties properties){
+    public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService, RabbitTemplate rabbitTemplate, RabbitMQProperties properties, RabbitMQListener rabbitMQListener){
         this.fileBoardReturnService = fileBoardReturnService;
         this.fileHistoryService = fileHistoryService;
         this.fileHistoryStatisticsService = fileHistoryStatisticsService;
         this.rabbitTemplate = rabbitTemplate;
         this.properties = properties;
+        this.rabbitMQListener = rabbitMQListener;
     }
     @GetMapping
     public String hello(){
@@ -65,5 +69,13 @@ public class FileController {
         long orgId = orgIdRequest.getOrgId();
         FileHistoryTotalDto fileHistoryStatistics = fileHistoryStatisticsService.eventStatistics(orgId);
         return ResponseDto.ofSuccess(fileHistoryStatistics);
+    }
+
+    @PostMapping("/test")
+    public void test(@RequestBody EventIdRequest eventIdRequest) {
+        System.out.println("Post");
+        long eventId = eventIdRequest.getEventId();
+        System.out.println("RabbitMQListener");
+        rabbitMQListener.onVtReportRequestReceived(eventId);
     }
 }
