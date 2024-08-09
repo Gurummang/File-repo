@@ -24,7 +24,6 @@ public class FileGroupService {
     @Autowired
     private FileGroupRepo fileGroupRepo;
 
-    // for comment commit
     // 유사도 측정 메서드
     private double calculateSimilarity(String a, String b) {
         JaroWinklerSimilarity similarity = new JaroWinklerSimilarity();
@@ -47,121 +46,51 @@ public class FileGroupService {
 
     // 확장자를 제거한 파일 이름을 반환하는 메서드
     private String getFileNameWithoutExtension(String fileName) {
-        return FilenameUtils.getBaseName(fileName);
+        return FilenameUtils.getBaseName(fileName).toLowerCase();  // Convert to lower case for consistency
     }
 
-    // 파일 그룹화 및 저장
-    public void groupFilesAndSave() {
-        // 파일 이름과 생성 시간을 조회
+    // 파일을 동기적으로 처리하는 메서드
+    public void groupFilesAndSave(long actId) {
+
+        // 파일 ID로 Activities 객체 조회
+        Activities activity = activitiesRepo.findById(actId)
+                .orElseThrow(() -> new RuntimeException("Activity not found"));
+
+        // 파일 이름을 포함한 Activities 객체 목록 가져오기
         List<Activities> activitiesList = activitiesRepo.findAll();
-        List<String> fileNames = activitiesList.stream()
-                .map(Activities::getFileName)
-                .distinct()
-                .collect(Collectors.toList());
+        String fileName1 = getFileNameWithoutExtension(activity.getFileName());
 
         // 그룹화 로직
-        Map<String, List<Activities>> groupedFiles = new HashMap<>();
-        Set<String> processedFiles = new HashSet<>();
+        List<Activities> group = activitiesList.stream()
+                .filter(a -> getFileNameWithoutExtension(a.getFileName()).equals(fileName1))
+                .collect(Collectors.toList());
 
-        for (int i = 0; i < fileNames.size(); i++) {
-            String fileName1 = getFileNameWithoutExtension(fileNames.get(i));
-            if (processedFiles.contains(fileName1)) continue;
-
-            List<Activities> group = new ArrayList<>();
-            group.addAll(activitiesList.stream()
-                    .filter(activity -> getFileNameWithoutExtension(activity.getFileName()).equals(fileName1))
-                    .collect(Collectors.toList()));
-
-            processedFiles.add(fileName1);
-
-            for (int j = i + 1; j < fileNames.size(); j++) {
-                String fileName2 = getFileNameWithoutExtension(fileNames.get(j));
-                if (calculateSimilarity(fileName1, fileName2) > SIM_THRESHOLD) {
-                    group.addAll(activitiesList.stream()
-                            .filter(activity -> getFileNameWithoutExtension(activity.getFileName()).equals(fileName2))
-                            .collect(Collectors.toList()));
-                    processedFiles.add(fileName2);
-                }
+        // 파일 이름 유사성 기반 그룹화
+        for (Activities otherActivity : activitiesList) {
+            String fileName2 = getFileNameWithoutExtension(otherActivity.getFileName());
+            if (calculateSimilarity(fileName1, fileName2) > SIM_THRESHOLD) {
+                group.add(otherActivity);
             }
-
-            String groupName = group.stream()
-                    .map(activity -> getFileNameWithoutExtension(activity.getFileName()))
-                    .reduce((a, b) -> getCommonSubstring(a, b))
-                    .orElse("Unknown Group");
-
-            groupedFiles.put(groupName, group);
         }
 
+        // 그룹 이름 결정
+        String groupName = group.stream()
+                .map(a -> getFileNameWithoutExtension(a.getFileName()))
+                .reduce((a, b) -> getCommonSubstring(a, b))
+                .orElse("Unknown Group");
+
         // 결과를 file_group 테이블에 저장
-        saveGroupsToFileGroupTable(groupedFiles);
+        saveGroupsToFileGroupTable(groupName, group);
     }
 
-    // 데이터베이스에서 그룹화된 파일 정보 조회
-    public List<Map<String, Object>> fileGrouping() {
-        // file_group 테이블에서 모든 그룹 정보를 조회
-        List<FileGroup> fileGroups = fileGroupRepo.findAll();
+    private void saveGroupsToFileGroupTable(String groupName, List<Activities> activitiesInGroup) {
+        fileGroupRepo.deleteAll(); // Consider using batch operations for large data
 
-        // file_group과 activities 테이블을 조인하여 그룹화된 파일 정보를 생성
-        Map<String, List<FileHistoryCorrelation>> groupedFiles = fileGroups.stream()
-                .collect(Collectors.groupingBy(
-                        FileGroup::getGroupName,
-                        Collectors.mapping(
-                                fileGroup -> {
-                                    // activities 테이블에서 파일 정보를 조회
-                                    Activities activity = activitiesRepo.findById(fileGroup.getId()).orElse(null);
-                                    if (activity != null) {
-                                        // FileHistoryCorrelation 객체 생성
-                                        return FileHistoryCorrelation.builder()
-                                                .eventId(activity.getId())
-                                                .saas("SampleSaaS") // 필요시 실제 값을 넣으세요
-                                                .eventType(activity.getEventType())
-                                                .fileName(activity.getFileName())
-                                                .saasFileId(activity.getSaasFileId())
-                                                .eventTs(activity.getEventTs())
-                                                .email("SampleEmail") // 필요시 실제 값을 넣으세요
-                                                .uploadChannel(activity.getUploadChannel())
-                                                .build();
-                                    }
-                                    return null;
-                                },
-                                Collectors.toList()
-                        )
-                ));
-
-        // 결과를 List<Map<String, Object>> 형태로 변환하여 반환
-        return groupedFiles.entrySet().stream()
-                .map(entry -> {
-                    Map<String, Object> result = new HashMap<>();
-                    result.put("group", entry.getKey());
-                    result.put("files", entry.getValue()); // FileHistoryCorrelation 객체 리스트를 포함
-
-                    // 그룹에서 가장 빠른 파일을 Origin으로 설정
-                    FileHistoryCorrelation originFile = entry.getValue().stream()
-                            .min(Comparator.comparing(FileHistoryCorrelation::getEventTs))
-                            .orElse(null);
-
-//                    result.put("origin", originFile != null ? originFile.getFileName() : "No Origin");
-                    return result;
-                })
-                .collect(Collectors.toList());
-    }
-
-
-    private void saveGroupsToFileGroupTable(Map<String, List<Activities>> groupedFiles) {
-        // 이전 데이터 삭제 (옵션)
-        fileGroupRepo.deleteAll();
-
-        // 새로운 그룹 데이터 저장
-        for (Map.Entry<String, List<Activities>> entry : groupedFiles.entrySet()) {
-            String groupName = entry.getKey();
-            List<Activities> activitiesInGroup = entry.getValue();
-
-            for (Activities activity : activitiesInGroup) {
-                FileGroup fileGroup = new FileGroup();
-                fileGroup.setId(activity.getId()); // file_group 테이블의 id를 activities 테이블의 id로 설정
-                fileGroup.setGroupName(groupName);
-                fileGroupRepo.save(fileGroup);
-            }
+        for (Activities activity : activitiesInGroup) {
+            FileGroup fileGroup = new FileGroup();
+            fileGroup.setId(activity.getId());
+            fileGroup.setGroupName(groupName);
+            fileGroupRepo.save(fileGroup);
         }
     }
 }
