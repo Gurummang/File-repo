@@ -18,8 +18,9 @@ public class RabbitMQListener {
     private FileGroupService fileGroupService;
 
     @RabbitListener(queues = "#{@rabbitMQProperties.groupingQueue}")
-    public void onVtReportRequestReceived(long actId) {
-        logger.info("received : {}", actId);
-        fileGroupService.groupFilesAndSave(actId);
+    public void onVtReportRequestReceived(long eventId) {
+//        logger.info("received : {}", actId);
+        System.out.println("received :" + eventId);
+        fileGroupService.groupFilesAndSave(eventId);
     }
 }
