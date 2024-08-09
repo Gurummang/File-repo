@@ -24,6 +24,7 @@ public class FileGroupService {
     @Autowired
     private FileGroupRepo fileGroupRepo;
 
+    // for comment commit
     // 유사도 측정 메서드
     private double calculateSimilarity(String a, String b) {
         JaroWinklerSimilarity similarity = new JaroWinklerSimilarity();
