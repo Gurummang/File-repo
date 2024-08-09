@@ -17,6 +17,9 @@ public interface ActivitiesRepo extends JpaRepository<Activities, Long> {
 
     List<Activities> findByUser_OrgSaaS_Org_Id(long orgId);
 
+    @Query("SELECT a.user.orgSaaS.org.id FROM Activities a WHERE a.id = :activityId")
+    Long findOrgIdByActivityId(@Param("activityId") long id);
+
     @Query("SELECT a FROM Activities a " +
             "JOIN a.user u " +
             "JOIN u.orgSaaS os " +

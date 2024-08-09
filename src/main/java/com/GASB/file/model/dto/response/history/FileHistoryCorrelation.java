@@ -16,17 +16,19 @@ public class FileHistoryCorrelation {
     private String saas;
     private String eventType;
     private String fileName;
+    private String hash256;
     private String saasFileId;
     private LocalDateTime eventTs;
     private String email;
     private String uploadChannel;
 
     @Builder
-    public FileHistoryCorrelation(long eventId, String saas, String eventType, String fileName, String saasFileId, LocalDateTime eventTs, String email, String uploadChannel){
+    public FileHistoryCorrelation(long eventId, String saas, String eventType, String fileName, String hash256, String saasFileId, LocalDateTime eventTs, String email, String uploadChannel){
         this.eventId = eventId;
         this.saas = saas;
         this.eventType = eventType;
         this.fileName = fileName;
+        this.hash256 = hash256;
         this.saasFileId = saasFileId;
         this.eventTs = eventTs;
         this.email = email;
