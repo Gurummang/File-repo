@@ -12,7 +12,22 @@ import java.util.Optional;
 
 @Repository
 public interface ActivitiesRepo extends JpaRepository<Activities, Long> {
-    Optional<Activities> findBysaasFileId(String fileId);
+
+    Optional<Activities> findBySaasFileId(String fileId);
+
+    List<Activities> findByUser_OrgSaaS_Org_Id(long orgId);
+
+    @Query("SELECT a FROM Activities a " +
+            "JOIN a.user u " +
+            "JOIN u.orgSaaS os " +
+            "WHERE os.org.id = :orgId " +
+            "AND a.id IN (" +
+            "SELECT fg.id FROM FileGroup fg WHERE fg.groupName = :groupName" +
+            ")")
+    List<Activities> findAllByOrgIdAndGroupName(
+            @Param("orgId") long orgId,
+            @Param("groupName") String groupName
+    );
 
     @Query("SELECT DATE(av.eventTs) AS date, " +
             "SUM(CASE WHEN av.eventType = 'file_uploaded' THEN 1 ELSE 0 END) AS uploadCount, " +

@@ -2,70 +2,82 @@ package com.GASB.file.service.history;
 
 import com.GASB.file.model.dto.response.history.FileHistoryCorrelation;
 import com.GASB.file.model.dto.response.history.FileHistoryDto;
+import com.GASB.file.model.entity.Activities;
+import com.GASB.file.repository.file.ActivitiesRepo;
+import com.GASB.file.repository.file.FileGroupRepo;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 @Service
 public class FileHistoryService {
 
-    public List<FileHistoryDto> historyListReturn() {
-        List<FileHistoryDto> fileHistoryDtoList = new ArrayList<>();
+    private final ActivitiesRepo activitiesRepo;
+    private final FileGroupRepo fileGroupRepo;
 
-        // 예시로 5개의 FileHistoryDto 객체를 생성
-        for (int i = 0; i < 5; i++) {
-            long eventId = generateRandomEventId();
-            String SaaS = "SampleSaaS";
-            String eventType = "UPLOAD";
-            String fileName = "example-file-" + i + ".txt";
-            String saasFileId = "FK12354";
-            LocalDateTime uploadTs = LocalDateTime.now().minusDays(i);
-            LocalDateTime eventTs = LocalDateTime.now();
-            String email = "user" + i + "@example.com";
-            String uploadChannel = "WEB";
+    public FileHistoryService(ActivitiesRepo activitiesRepo, FileGroupRepo fileGroupRepo){
+        this.activitiesRepo = activitiesRepo;
+        this.fileGroupRepo = fileGroupRepo;
+    }
+    public List<FileHistoryDto> historyListReturn(long orgId) {
+        // Activities 엔티티를 조회합니다.
+        List<Activities> activitiesList = activitiesRepo.findByUser_OrgSaaS_Org_Id(orgId);
 
-            // FileHistoryCorrelation 리스트 생성
-            List<FileHistoryCorrelation> correlationList = fileGroupList();
-
-            // FileHistoryDto 객체 생성 및 리스트에 추가
-            FileHistoryDto fileHistoryDto = FileHistoryDto.builder()
-                    .eventId(eventId)
-                    .saas(SaaS)
-                    .eventType(eventType)
-                    .fileName(fileName)
-                    .saasFileId(saasFileId)
-                    .uploadTs(uploadTs)
-                    .eventTs(eventTs)
-                    .email(email)
-                    .uploadChannel(uploadChannel)
-                    .correlation(correlationList)
-                    .build();
-
-            fileHistoryDtoList.add(fileHistoryDto);
-        }
-
-        return fileHistoryDtoList;
+        // 각 Activities를 FileHistoryDto로 변환합니다.
+        return activitiesList.stream()
+                .map(activity -> convertToFileHistoryDto(activity, orgId))
+                .sorted(Comparator.comparing(FileHistoryDto::getEventTs))
+                .collect(Collectors.toList());
     }
 
-    private List<FileHistoryCorrelation> fileGroupList() {
-        // 샘플 FileHistoryCorrelation 객체 리스트 생성
-        List<FileHistoryCorrelation> correlationList = new ArrayList<>();
+    private FileHistoryDto convertToFileHistoryDto(Activities activity, long orgId) {
+        // FileHistoryCorrelation 리스트를 생성합니다.
+        List<FileHistoryCorrelation> correlations = createFileHistoryCorrelations(activity.getId(), orgId);
 
-        // 여러 개의 FileHistoryCorrelation 객체 생성 및 추가
-        for (int i = 0; i < 3; i++) { // 예시로 3개의 객체를 추가
-            FileHistoryCorrelation correlation = new FileHistoryCorrelation();
-            // correlation 객체의 필드를 설정합니다. 예: correlation.setSomeField("value");
-            correlationList.add(correlation);
-        }
+        // FileHistoryCorrelation 리스트를 eventTs 기준으로 정렬합니다.
+        List<FileHistoryCorrelation> sortedCorrelations = correlations.stream()
+                .sorted(Comparator.comparing(FileHistoryCorrelation::getEventTs))
+                .toList();
 
-        return correlationList;
+        // FileHistoryDto를 생성합니다.
+        return FileHistoryDto.builder()
+                .eventId(activity.getId())
+                .saas(activity.getUser().getOrgSaaS().getSaas().getSaasName())
+                .eventType(activity.getEventType())
+                .fileName(activity.getFileName())
+                .saasFileId(activity.getSaasFileId())
+                .uploadTs(activity.getEventTs())
+                .eventTs(activity.getEventTs())
+                .email(activity.getUser().getEmail())
+                .uploadChannel(activity.getUploadChannel())
+                .correlation(correlations)
+                .build();
     }
 
-    private long generateRandomEventId() {
-        // 예시로 랜덤 이벤트 ID 생성
-        return new Random().nextLong();
+    private List<FileHistoryCorrelation> createFileHistoryCorrelations(long activityId, long orgId) {
+        // activityId를 기반으로 그룹 이름을 조회합니다.
+        String groupName = fileGroupRepo.findGroupNameById(activityId);
+
+        // orgId와 groupName으로 필터링된 Activities를 조회합니다.
+        List<Activities> activities = activitiesRepo.findAllByOrgIdAndGroupName(orgId, groupName);
+
+        // 일치하는 그룹 이름을 가진 FileHistoryCorrelation 객체 리스트를 생성합니다.
+        return activities.stream()
+                .map(activity -> FileHistoryCorrelation.builder()
+                        .eventId(activity.getId())
+                        .saas(activity.getUser().getOrgSaaS().getSaas().getSaasName())
+                        .eventType(activity.getEventType())
+                        .fileName(activity.getFileName())
+                        .saasFileId(activity.getSaasFileId())
+                        .eventTs(activity.getEventTs())
+                        .email(activity.getUser().getEmail())
+                        .uploadChannel(activity.getUploadChannel())
+                        .build())
+                .collect(Collectors.toList());
     }
 }
