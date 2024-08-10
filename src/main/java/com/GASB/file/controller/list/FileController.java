@@ -9,6 +9,7 @@ import com.GASB.file.model.dto.response.list.ResponseDto;
 import com.GASB.file.service.dashboard.FileBoardReturnService;
 import com.GASB.file.service.history.FileHistoryService;
 import com.GASB.file.service.history.FileHistoryStatisticsService;
+import com.GASB.file.service.history.FileNodeService;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -22,14 +23,17 @@ public class FileController {
     private final FileBoardReturnService fileBoardReturnService;
     private final FileHistoryService fileHistoryService;
     private final FileHistoryStatisticsService fileHistoryStatisticsService;
+    private final FileNodeService fileNodeService;
     private final RabbitTemplate rabbitTemplate;
     private final RabbitMQProperties properties;
 
     @Autowired
-    public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService, RabbitTemplate rabbitTemplate, RabbitMQProperties properties){
+    public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService, FileNodeService fileNodeService,
+                          RabbitTemplate rabbitTemplate, RabbitMQProperties properties){
         this.fileBoardReturnService = fileBoardReturnService;
         this.fileHistoryService = fileHistoryService;
         this.fileHistoryStatisticsService = fileHistoryStatisticsService;
+        this.fileNodeService = fileNodeService;
         this.rabbitTemplate = rabbitTemplate;
         this.properties = properties;
     }
@@ -65,5 +69,12 @@ public class FileController {
         long orgId = orgIdRequest.getOrgId();
         FileHistoryTotalDto fileHistoryStatistics = fileHistoryStatisticsService.eventStatistics(orgId);
         return ResponseDto.ofSuccess(fileHistoryStatistics);
+    }
+
+    @GetMapping("/history/visualize")
+    public ResponseDto<FileRelation> fileHistoryVisualize(@RequestBody EventIdRequest eventIdRequest){
+        long eventId = eventIdRequest.getEventId();
+        FileRelation fileRelation = fileNodeService.returnFileRelation(eventId);
+        return ResponseDto.ofSuccess(fileRelation);
     }
 }
