@@ -71,11 +71,11 @@ public class FileController {
         return ResponseDto.ofSuccess(fileHistoryStatistics);
     }
 
-    @PostMapping("/test")
-    public void test(@RequestBody EventIdRequest eventIdRequest) {
-        System.out.println("Post");
-        long eventId = eventIdRequest.getEventId();
-        System.out.println("RabbitMQListener");
-        rabbitMQListener.onVtReportRequestReceived(eventId);
-    }
+//    @PostMapping("/test")
+//    public void test(@RequestBody EventIdRequest eventIdRequest) {
+//        System.out.println("Post");
+//        long eventId = eventIdRequest.getEventId();
+//        System.out.println("RabbitMQListener");
+//        rabbitMQListener.onVtReportRequestReceived(eventId);
+//    }
 }
