@@ -15,7 +15,16 @@ public interface ActivitiesRepo extends JpaRepository<Activities, Long> {
 
     Optional<Activities> findBySaasFileId(String fileId);
 
+    @Query("SELECT a FROM Activities a WHERE a.user.orgSaaS.org.id = :orgId AND a.fileGroup.groupName = :groupName")
+    List<Activities> findByOrgIdAndGroupName(@Param("orgId") long orgId, @Param("groupName") String groupName);
+
+    @Query("SELECT a FROM Activities a WHERE a.saasFileId = :saasFileId")
+    List<Activities> findListBySaasFileId(@Param("saasFileId") String saasFileId);
+
     List<Activities> findByUser_OrgSaaS_Org_Id(long orgId);
+
+    @Query("SELECT a FROM Activities a WHERE a.saasFileId IN (SELECT f.saasFileId FROM FileUpload f WHERE f.hash = :hash)")
+    List<Activities> findByHash(@Param("hash") String hash);
 
     @Query("SELECT a.user.orgSaaS.org.id FROM Activities a WHERE a.id = :activityId")
     Long findOrgIdByActivityId(@Param("activityId") long id);

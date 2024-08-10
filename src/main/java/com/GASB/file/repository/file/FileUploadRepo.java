@@ -17,6 +17,9 @@ import java.util.Optional;
 @Repository
 public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
 
+    @Query("SELECT f.hash FROM FileUpload f WHERE f.saasFileId = :saasFileId")
+    String findHashBySaasFileId(@Param("saasFileId") String saasFileId);
+
     @Query("SELECT COUNT(fu.id) FROM FileUpload fu JOIN OrgSaaS os ON fu.orgSaaS.id = os.id WHERE fu.deleted = false AND os.org.id = :orgId")
     Long countFileByOrgId(@Param("orgId") Long orgId);
 
