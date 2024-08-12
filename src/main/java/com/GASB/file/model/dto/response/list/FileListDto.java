@@ -5,26 +5,38 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @Builder
 public class FileListDto {
     private long id;
+    private String fileName;
     private String saltedHash;
     private int size;
     private String type;
+    private String saas;
+    private String user;
+    private String uploadChannel;
+    private LocalDateTime created_at;
     private VtReportDto vtReport;
     private FileStatusDto fileStatus;
     private InnerScanDto GScan;
 
 
     @Builder
-    public FileListDto(long id, String saltedHash, int size, String type, VtReportDto vtReport, FileStatusDto fileStatus, InnerScanDto GScan){
+    public FileListDto(long id, String fileName, String saltedHash, int size, String type, String saas, String user, String uploadChannel, LocalDateTime created_at, VtReportDto vtReport, FileStatusDto fileStatus, InnerScanDto GScan){
         this.id = id;
+        this.fileName = fileName;
         this.saltedHash = saltedHash;
         this.size = size;
         this.type = type;
+        this.saas = saas;
+        this.user = user;
+        this.uploadChannel = uploadChannel;
+        this.created_at = created_at;
         this.vtReport = vtReport;
         this.fileStatus = fileStatus;
         this.GScan = GScan;

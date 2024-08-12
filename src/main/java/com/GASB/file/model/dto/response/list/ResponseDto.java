@@ -17,23 +17,6 @@ public class ResponseDto<T> {
     private String message;
     private T data;
 
-    @Getter
-    @Setter
-    @Builder
-    public static class FileListResponse {
-        private int total;
-        private int malwareTotal;
-        private List<FileListDto> files;
-
-        public static FileListResponse of(int total, int malwareTotal, List<FileListDto> files) {
-            return FileListResponse.builder()
-                    .total(total)
-                    .malwareTotal(malwareTotal)
-                    .files(files)
-                    .build();
-        }
-    }
-
     public static <T> ResponseDto<T> ofSuccess() {
         return ResponseDto.<T>builder()
                 .status("success")
