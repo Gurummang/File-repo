@@ -123,18 +123,26 @@ public class FileGroupService {
         System.out.println("Current File Type: " + actFileType);
         System.out.println("Current File Timestamp: " + actFileTs);
 
-        // 4. 유사도 0.8 이상인 그룹의 이름을 찾고 그룹의 파일을 업데이트
         boolean groupUpdated = false;
+
         for (String groupName : groupNames) {
             double similarity = calculateSimilarity(actFileName, groupName);
             System.out.println("Comparing with Group Name: " + groupName + ", Similarity: " + similarity);
 
             if (similarity >= SIM_THRESHOLD) {
-                // 그룹의 파일들 중 가장 빠른 타임스탬프 찾기 및 타입 비교
+                // 그룹의 파일들 중 가장 빠른 타임스탬프 찾기
                 List<Activities> groupActivities = selectedActivities.stream()
                         .filter(a -> groupName.equals(fileGroupRepo.findGroupNameById(a.getId())))
-                        .filter(a -> actFileType.equals(determineFileType(a.getFileName()))) // 파일 유형이 일치하는 경우만
                         .toList();
+
+                String groupFileType = determineFileType(groupActivities.get(0).getFileName());
+                if (!actFileType.equals(groupFileType)) {
+                    // 타입이 다를 경우 새로운 그룹 생성
+                    System.out.println("File type mismatch. Creating a new group.");
+                    updateFileGroup(activity.getId(), actFileName, actFileType);
+                    groupUpdated = true;
+                    break;
+                }
 
                 Timestamp earliestTs = groupActivities.stream()
                         .map(a -> Timestamp.valueOf(a.getEventTs()))
@@ -152,7 +160,7 @@ public class FileGroupService {
 
                     System.out.println("Group name updated to: " + actFileName);
                     groupUpdated = true;
-                    break; // 그룹이 업데이트 되었으므로 추가 비교 필요 없음
+                    break;
                 } else {
                     // 그룹 이름을 업데이트하지 않음
                     updateFileGroup(activity.getId(), groupName, actFileType);
@@ -180,4 +188,3 @@ public class FileGroupService {
     }
 
 }
-
