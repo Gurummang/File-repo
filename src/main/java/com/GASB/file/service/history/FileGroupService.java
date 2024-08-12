@@ -32,26 +32,11 @@ public class FileGroupService {
         this.slackUserRepo = slackUserRepo;
     }
 
-
     // 유사도 측정 메서드
     private double calculateSimilarity(String a, String b) {
         JaroWinklerSimilarity similarity = new JaroWinklerSimilarity();
         return similarity.apply(a, b);
     }
-
-//    // 공통된 부분 추출 메서드
-//    private String getCommonSubstring(String a, String b) {
-//        int maxLength = Math.min(a.length(), b.length());
-//        for (int length = maxLength; length > 0; length--) {
-//            for (int start = 0; start <= a.length() - length; start++) {
-//                String substring = a.substring(start, start + length);
-//                if (b.contains(substring)) {
-//                    return substring;
-//                }
-//            }
-//        }
-//        return "";  // No common substring found
-//    }
 
     // 확장자를 제거한 파일 이름을 반환하는 메서드
     private String getFileNameWithoutExtension(String fileName) {
@@ -84,7 +69,7 @@ public class FileGroupService {
                     return otherMonitoredUsers != null && otherMonitoredUsers.getOrgSaaS().getOrg().getId() == orgId;
                 })
                 .distinct() // 중복 제거
-                .collect(Collectors.toList());
+                .toList();
 
         System.out.println("Selected Activities:");
         selectedActivities.forEach(a -> System.out.println("Activity ID: " + a.getId() + ", File Name: " + a.getFileName() + ", Event Timestamp: " + a.getEventTs()));
@@ -115,7 +100,7 @@ public class FileGroupService {
                 // 그룹의 파일들 중 가장 빠른 타임스탬프 찾기
                 List<Activities> groupActivities = selectedActivities.stream()
                         .filter(a -> groupName.equals(fileGroupRepo.findGroupNameById(a.getId())))
-                        .collect(Collectors.toList());
+                        .toList();
 
                 Timestamp earliestTs = groupActivities.stream()
                         .map(a -> Timestamp.valueOf(a.getEventTs()))
@@ -159,6 +144,4 @@ public class FileGroupService {
         // 디버깅 출력
         System.out.println("FileGroup saved: Activity ID = " + activityId + ", Group Name = " + groupName);
     }
-
-
 }
