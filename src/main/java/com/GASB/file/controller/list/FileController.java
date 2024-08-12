@@ -5,8 +5,10 @@ import com.GASB.file.model.dto.request.EventIdRequest;
 import com.GASB.file.model.dto.request.OrgIdRequest;
 import com.GASB.file.model.dto.response.dashboard.FileDashboardDto;
 import com.GASB.file.model.dto.response.history.*;
+import com.GASB.file.model.dto.response.list.FileListResponse;
 import com.GASB.file.model.dto.response.list.ResponseDto;
 import com.GASB.file.service.dashboard.FileBoardReturnService;
+import com.GASB.file.service.filescan.FileScanListService;
 import com.GASB.file.service.history.FileHistoryService;
 import com.GASB.file.service.history.FileHistoryStatisticsService;
 import com.GASB.file.service.history.FileNodeService;
@@ -24,15 +26,17 @@ public class FileController {
     private final FileHistoryService fileHistoryService;
     private final FileHistoryStatisticsService fileHistoryStatisticsService;
     private final FileNodeService fileNodeService;
+    private final FileScanListService fileScanListService;
     private final RabbitMQProperties properties;
 
     @Autowired
     public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService, FileNodeService fileNodeService,
-                          RabbitMQProperties properties){
+                          FileScanListService fileScanListService, RabbitMQProperties properties){
         this.fileBoardReturnService = fileBoardReturnService;
         this.fileHistoryService = fileHistoryService;
         this.fileHistoryStatisticsService = fileHistoryStatisticsService;
         this.fileNodeService = fileNodeService;
+        this.fileScanListService = fileScanListService;
         this.properties = properties;
     }
     @GetMapping
@@ -67,5 +71,16 @@ public class FileController {
         long eventId = eventIdRequest.getEventId();
         FileHistoryBySaaS fileHistoryBySaaS = fileNodeService.getFileHistoryBySaaS(eventId);
         return ResponseDto.ofSuccess(fileHistoryBySaaS);
+    }
+
+    @GetMapping("/scan")
+    public ResponseDto<FileListResponse> getFileList(@RequestBody OrgIdRequest orgIdRequest) {
+        try {
+            long orgId = orgIdRequest.getOrgId();
+            FileListResponse fileListResponse = fileScanListService.getFileList(orgId);
+            return ResponseDto.ofSuccess(fileListResponse);
+        } catch (Exception e){
+            return ResponseDto.ofFail(e.getMessage());
+        }
     }
 }
