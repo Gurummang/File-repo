@@ -24,17 +24,15 @@ public class FileController {
     private final FileHistoryService fileHistoryService;
     private final FileHistoryStatisticsService fileHistoryStatisticsService;
     private final FileNodeService fileNodeService;
-    private final RabbitTemplate rabbitTemplate;
     private final RabbitMQProperties properties;
 
     @Autowired
     public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService, FileNodeService fileNodeService,
-                          RabbitTemplate rabbitTemplate, RabbitMQProperties properties){
+                          RabbitMQProperties properties){
         this.fileBoardReturnService = fileBoardReturnService;
         this.fileHistoryService = fileHistoryService;
         this.fileHistoryStatisticsService = fileHistoryStatisticsService;
         this.fileNodeService = fileNodeService;
-        this.rabbitTemplate = rabbitTemplate;
         this.properties = properties;
     }
     @GetMapping
@@ -57,13 +55,6 @@ public class FileController {
         return ResponseDto.ofSuccess(fileHistory);
     }
 
-    @PostMapping("/history")
-    public ResponseDto<FileHistoryBySaaS> fileHistoryGroupReturn(@RequestBody EventIdRequest eventIdRequest){
-        long eventId = eventIdRequest.getEventId();
-        FileHistoryBySaaS fileHistoryCorrelationsInfo = fileHistoryService.createFileHistoryCorrelations(eventId);
-        return ResponseDto.ofSuccess(fileHistoryCorrelationsInfo);
-    }
-
     @GetMapping("/history/statistics")
     public ResponseDto<FileHistoryTotalDto> fileHistoryStatisticsList(@RequestBody OrgIdRequest orgIdRequest){
         long orgId = orgIdRequest.getOrgId();
@@ -72,9 +63,9 @@ public class FileController {
     }
 
     @GetMapping("/history/visualize")
-    public ResponseDto<FileRelation> fileHistoryVisualize(@RequestBody EventIdRequest eventIdRequest){
+    public ResponseDto<FileHistoryBySaaS> fileHistoryVisualize(@RequestBody EventIdRequest eventIdRequest){
         long eventId = eventIdRequest.getEventId();
-        FileRelation fileRelation = fileNodeService.returnFileRelation(eventId);
-        return ResponseDto.ofSuccess(fileRelation);
+        FileHistoryBySaaS fileHistoryBySaaS = fileNodeService.getFileHistoryBySaaS(eventId);
+        return ResponseDto.ofSuccess(fileHistoryBySaaS);
     }
 }

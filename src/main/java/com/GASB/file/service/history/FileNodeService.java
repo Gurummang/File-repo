@@ -22,9 +22,13 @@ public class FileNodeService {
         this.fileGroupRepo = fileGroupRepo;
     }
 
-    public FileRelation returnFileRelation(long eventId) {
+    public FileHistoryBySaaS getFileHistoryBySaaS(long eventId) {
         Activities activity = activitiesRepo.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Activity not found"));
+
+        Map<String, List<FileRelationNodes>> fileHistoryMap = new HashMap<>();
+        fileHistoryMap.put("slack", new ArrayList<>());
+        fileHistoryMap.put("googleDrive", new ArrayList<>());
 
         Set<Long> seenEventIds = new HashSet<>();
         Map<Long, FileRelationNodes> nodesMap = new HashMap<>();
@@ -34,8 +38,18 @@ public class FileNodeService {
         // BFS 탐색 시작
         exploreFileRelationsBFS(activity, maxDepth, seenEventIds, nodesMap, edges);
 
-        return FileRelation.builder()
-                .nodes(new ArrayList<>(nodesMap.values()))
+        // Slack과 Google Drive에 따라 파일 노드 추가
+        String saasName = activity.getUser().getOrgSaaS().getSaas().getSaasName().toLowerCase();
+        List<FileRelationNodes> nodesList = new ArrayList<>(nodesMap.values());
+        if ("slack".equals(saasName)) {
+            fileHistoryMap.get("slack").addAll(nodesList);
+        } else if ("googledrive".equals(saasName)) {
+            fileHistoryMap.get("googleDrive").addAll(nodesList);
+        }
+
+        return FileHistoryBySaaS.builder()
+                .slack(fileHistoryMap.get("slack"))
+                .googleDrive(fileHistoryMap.get("googleDrive"))
                 .edges(edges)
                 .build();
     }
@@ -66,7 +80,7 @@ public class FileNodeService {
                     if (!seenEventIds.contains(a.getId()) && a.getId() != currentActivity.getId()) {
                         FileRelationNodes targetNode = createFileRelationNodes(a);
                         nodesMap.putIfAbsent(a.getId(), targetNode);
-                        edges.add(new FileRelationEdges(currentActivity.getId(), a.getId(), "SAAS_ID_MATCH"));
+                        edges.add(new FileRelationEdges(currentActivity.getId(), a.getId(), "SaaS_FileId_Match"));
                         queue.add(new ExplorationNode(a, currentDepth + 1));
                     }
                 }
@@ -79,7 +93,6 @@ public class FileNodeService {
                 if (!seenEventIds.contains(a.getId()) && a.getId() != currentActivity.getId()) {
                     FileRelationNodes targetNode = createFileRelationNodes(a);
                     nodesMap.putIfAbsent(a.getId(), targetNode);
-                    edges.add(new FileRelationEdges(currentActivity.getId(), a.getId(), "HASH_MATCH"));
                     queue.add(new ExplorationNode(a, currentDepth + 1));
                 }
             }
@@ -94,7 +107,6 @@ public class FileNodeService {
             if(!seenEventIds.contains(a.getId()) && a.getId() != startActivity.getId()){
                 FileRelationNodes targetNode = createFileRelationNodes(a);
                 nodesMap.putIfAbsent(a.getId(), targetNode);
-                edges.add(new FileRelationEdges(startActivity.getId(), a.getId(), "SIMILAR_MATCH"));
             }
         }
     }
