@@ -3,8 +3,6 @@ package com.GASB.file.service.history;
 import com.GASB.file.model.entity.*;
 import com.GASB.file.repository.file.ActivitiesRepo;
 import com.GASB.file.repository.file.FileGroupRepo;
-import com.GASB.file.repository.org.OrgSaaSRepo;
-import com.GASB.file.repository.user.SlackUserRepo;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.text.similarity.JaroWinklerSimilarity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,17 +19,12 @@ public class FileGroupService {
 
     private final ActivitiesRepo activitiesRepo;
     private final FileGroupRepo fileGroupRepo;
-    private final OrgSaaSRepo orgSaaSRepo;
-    private final SlackUserRepo slackUserRepo;
 
     @Autowired
-    public FileGroupService(ActivitiesRepo activitiesRepo, FileGroupRepo fileGroupRepo, OrgSaaSRepo orgSaaSRepo, SlackUserRepo slackUserRepo) {
+    public FileGroupService(ActivitiesRepo activitiesRepo, FileGroupRepo fileGroupRepo) {
         this.activitiesRepo = activitiesRepo;
         this.fileGroupRepo = fileGroupRepo;
-        this.orgSaaSRepo = orgSaaSRepo;
-        this.slackUserRepo = slackUserRepo;
     }
-
 
     // 유사도 측정 메서드
     private double calculateSimilarity(String a, String b) {
@@ -39,127 +32,91 @@ public class FileGroupService {
         return similarity.apply(a, b);
     }
 
-    // 공통된 부분 추출 메서드
-    private String getCommonSubstring(String a, String b) {
-        int maxLength = Math.min(a.length(), b.length());
-        for (int length = maxLength; length > 0; length--) {
-            for (int start = 0; start <= a.length() - length; start++) {
-                String substring = a.substring(start, start + length);
-                if (b.contains(substring)) {
-                    return substring;
-                }
-            }
-        }
-        return "";  // No common substring found
-    }
-
     // 확장자를 제거한 파일 이름을 반환하는 메서드
     private String getFileNameWithoutExtension(String fileName) {
         return FilenameUtils.getBaseName(fileName).toLowerCase();  // Convert to lower case for consistency
     }
 
-    // 파일을 동기적으로 처리하는 메서드
-    public void groupFilesAndSave(long actId) {
+    // 파일의 확장자를 기반으로 그룹 유형을 결정하는 메서드
+    private String determineFileType(String fileName) {
+        String extension = FilenameUtils.getExtension(fileName).toLowerCase();
+        return switch (extension) {
+            case "exe", "dll", "elf" -> "execute";
+            case "jpg", "jpeg", "png", "gif", "webp", "svg" -> "image";
+            case "docx", "hwp", "doc", "xls", "xlsx", "ppt", "pptx", "pdf", "txt", "html" -> "document";
+            default -> "unknown"; // 기타 확장자는 "unknown"으로 처리
+        };
+    }
 
-        // activities 객체, by actId
+    public void groupFilesAndSave(long actId) {
         // 1. 파일 ID로 Activities 객체 조회
         Activities activity = activitiesRepo.findById(actId)
                 .orElseThrow(() -> new RuntimeException("Activity not found"));
-        // 2. monitored_users조회
-        MonitoredUsers monitoredUsers = activity.getUser();
-        // 3. orgSaas 조회
-        OrgSaaS orgSaaS = monitoredUsers.getOrgSaaS();
-        // 4. orgId 조회
-        Org org = orgSaaS.getOrg();
-        // 5. activities객체의 orgId
-        long orgId = org.getId();
-        System.out.println("orgId: " + orgId);
 
-        // activities 테이블의 모든 튜플 리스팅
-        List<Activities> activitiesList = activitiesRepo.findAll();
-        // actList에서 조건에 맞게 선정 -> selList로 추출
-        List<Activities> selectedActivities = activitiesList.stream()
-                .filter(a-> {
+        // 2. 현재 검사 주체의 파일 이름과 확장자
+        String actFileName = getFileNameWithoutExtension(activity.getFileName());
+        String actFileType = determineFileType(activity.getFileName());
+        Timestamp actFileTs = Timestamp.valueOf(activity.getEventTs());
+
+        // 3. orgId 조회
+        long orgId = activity.getUser().getOrgSaaS().getOrg().getId();
+
+        // 4. orgId와 일치하고, type이 동일한 활동들 가져오기 (actId 제외)
+        List<Activities> selectedActivities = activitiesRepo.findAll().stream()
+                .filter(a -> a.getId() != actId) // 현재 파일을 제외
+                .filter(a -> {
                     MonitoredUsers otherMonitoredUsers = a.getUser();
-                    if(otherMonitoredUsers == null){
-                        return false;
-                    }
-                    OrgSaaS otherOrgSaaS = otherMonitoredUsers.getOrgSaaS();
-                    Org otherOrg = otherOrgSaaS.getOrg();
-                    return otherOrgSaaS != null && otherOrgSaaS.getOrg().getId() == orgId;
+                    return otherMonitoredUsers != null &&
+                            otherMonitoredUsers.getOrgSaaS().getOrg().getId() == orgId &&
+                            determineFileType(a.getFileName()).equals(actFileType); // 타입 일치
                 })
-                .collect(Collectors.toList());
-        // List 출력
-        System.out.println("Selected Activities:");
+                .distinct() // 중복 제거
+                .toList();
 
-        // Debug the filter logic
-        for (Activities a : selectedActivities) {
-            MonitoredUsers otherMonitoredUsers = a.getUser();
-            if (otherMonitoredUsers != null) {
-                OrgSaaS otherOrgSaaS = otherMonitoredUsers.getOrgSaaS();
-                if (otherOrgSaaS != null) {
-                    long otherOrgId = otherOrgSaaS.getOrg().getId();
-                    System.out.println("activityID: " + a.getId() + ", orgID: " + otherOrgId + ", eventTs:" + a.getEventTs());
+        // 5. 그룹 이름 추출 및 null과 중복 제거
+        Set<String> groupNames = selectedActivities.stream()
+                .map(a -> fileGroupRepo.findGroupNameById(a.getId())) // groupName 조회
+                .filter(Objects::nonNull) // null 제거
+                .collect(Collectors.toSet()); // 중복 제거
+
+        boolean groupUpdated = false;
+
+        for (String groupName : groupNames) {
+            double similarity = calculateSimilarity(actFileName, groupName);
+
+            if (similarity >= SIM_THRESHOLD) {
+                // 그룹의 파일들 중 가장 빠른 타임스탬프 찾기
+                List<Activities> groupActivities = selectedActivities.stream()
+                        .filter(a -> groupName.equals(fileGroupRepo.findGroupNameById(a.getId())))
+                        .toList();
+
+                Timestamp earliestTs = groupActivities.stream()
+                        .map(a -> Timestamp.valueOf(a.getEventTs()))
+                        .min(Comparator.naturalOrder())
+                        .orElse(null);
+
+                if (earliestTs != null && actFileTs.before(earliestTs)) {
+                    // 현재 그룹 이름을 파일 이름으로 변경
+                    groupActivities.forEach(a -> updateFileGroup(a.getId(), actFileName, actFileType));
+                    updateFileGroup(activity.getId(), actFileName, actFileType);
+                } else {
+                    // 그룹 이름을 업데이트하지 않음
+                    updateFileGroup(activity.getId(), groupName, actFileType);
                 }
+                groupUpdated = true;
+                break;
             }
         }
 
-        // 확장자 제거한 파일네임
-        String actFileName = getFileNameWithoutExtension(activity.getFileName());
-        Timestamp actFileTs = Timestamp.valueOf(activity.getEventTs());
-
-        // 9. 파일 이름 유사도 기반 그룹화 로직
-        List<FileGroup> fileGroups = selectedActivities.stream()
-                .map(a -> {
-                    String otherFileName = getFileNameWithoutExtension(a.getFileName());
-                    Timestamp otherFileTs = Timestamp.valueOf(a.getEventTs());
-                    double similarity = calculateSimilarity(actFileName, otherFileName);
-
-                    System.out.println("\nCompare: " + actFileName + " vs " + otherFileName);
-                    System.out.println("similarity: " + similarity);
-
-                    String groupName;
-
-                    if (similarity >= SIM_THRESHOLD) {
-                        // 유사도가 0.8 이상인 경우, ts가 빠른 파일의 이름을 그룹 이름으로 지정
-                        if(actFileTs.compareTo(otherFileTs) <= 0) {
-                            groupName = getCommonSubstring(actFileName, otherFileName);
-                        } else {
-                            groupName = getCommonSubstring(actFileName, otherFileName);
-                        }
-                    } else {
-                        // 유사도가 0.8 이하인 경우, 파일 이름을 그룹 이름으로 설정
-                        groupName = otherFileName;
-                    }
-                    System.out.println("groupName: " + groupName);
-
-                    // FileGroup 객체 생성
-                    return new FileGroup(a.getId(), groupName);
-                })
-                .collect(Collectors.toList());
-
-
-//        // 10. 그룹 이름 결정
-//        String groupName = fileGroups.stream()
-//                .map(FileGroup::getGroupName)
-//                .distinct()
-//                .findFirst()
-//                .orElse("Unknown Group");
-
-        // 11. 결과를 file_group 테이블에 저장
-        saveGroupsToFileGroupTable(fileGroups);
+        // 조건에 맞는 그룹이 없거나 그룹 이름을 업데이트하지 않은 경우, 현재 파일의 그룹을 설정
+        if (!groupUpdated) {
+            updateFileGroup(activity.getId(), actFileName, actFileType);
+        }
     }
 
-    private void saveGroupsToFileGroupTable(List<FileGroup> fileGroups) {
-        // 데이터베이스에 저장할 전처리 작업을 수행할 수 있음 (예: 기존 데이터 삭제 등)
-
-        // 기존 데이터 삭제
-        fileGroupRepo.deleteAll();
-
-        // 파일 그룹 리스트를 데이터베이스에 저장
-        fileGroups.forEach(fileGroup -> {
-            fileGroupRepo.save(fileGroup);
-        });
+    private void updateFileGroup(long activityId, String groupName, String groupType) {
+        // FileGroup 객체를 생성하여 데이터베이스에 저장
+        FileGroup fileGroup = new FileGroup(activityId, groupName, groupType); // groupType 추가
+        fileGroupRepo.save(fileGroup);
     }
-
 }

@@ -5,11 +5,13 @@ import com.GASB.file.model.dto.request.EventIdRequest;
 import com.GASB.file.model.dto.request.OrgIdRequest;
 import com.GASB.file.model.dto.response.dashboard.FileDashboardDto;
 import com.GASB.file.model.dto.response.history.*;
+import com.GASB.file.model.dto.response.list.FileListResponse;
 import com.GASB.file.model.dto.response.list.ResponseDto;
 import com.GASB.file.service.dashboard.FileBoardReturnService;
+import com.GASB.file.service.filescan.FileScanListService;
 import com.GASB.file.service.history.FileHistoryService;
 import com.GASB.file.service.history.FileHistoryStatisticsService;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import com.GASB.file.service.history.FileVisualizeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,15 +24,18 @@ public class FileController {
     private final FileBoardReturnService fileBoardReturnService;
     private final FileHistoryService fileHistoryService;
     private final FileHistoryStatisticsService fileHistoryStatisticsService;
-    private final RabbitTemplate rabbitTemplate;
+    private final FileVisualizeService fileVisualizeService;
+    private final FileScanListService fileScanListService;
     private final RabbitMQProperties properties;
 
     @Autowired
-    public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService, RabbitTemplate rabbitTemplate, RabbitMQProperties properties){
+    public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService, FileVisualizeService fileVisualizeService,
+                          FileScanListService fileScanListService, RabbitMQProperties properties){
         this.fileBoardReturnService = fileBoardReturnService;
         this.fileHistoryService = fileHistoryService;
         this.fileHistoryStatisticsService = fileHistoryStatisticsService;
-        this.rabbitTemplate = rabbitTemplate;
+        this.fileVisualizeService = fileVisualizeService;
+        this.fileScanListService = fileScanListService;
         this.properties = properties;
     }
     @GetMapping
@@ -53,17 +58,28 @@ public class FileController {
         return ResponseDto.ofSuccess(fileHistory);
     }
 
-    @PostMapping("/history")
-    public ResponseDto<FileHistoryBySaaS> fileHistoryGroupReturn(@RequestBody EventIdRequest eventIdRequest){
-        long eventId = eventIdRequest.getEventId();
-        FileHistoryBySaaS fileHistoryCorrelationsInfo = fileHistoryService.createFileHistoryCorrelations(eventId);
-        return ResponseDto.ofSuccess(fileHistoryCorrelationsInfo);
-    }
-
     @GetMapping("/history/statistics")
     public ResponseDto<FileHistoryTotalDto> fileHistoryStatisticsList(@RequestBody OrgIdRequest orgIdRequest){
         long orgId = orgIdRequest.getOrgId();
         FileHistoryTotalDto fileHistoryStatistics = fileHistoryStatisticsService.eventStatistics(orgId);
         return ResponseDto.ofSuccess(fileHistoryStatistics);
+    }
+
+    @GetMapping("/history/visualize")
+    public ResponseDto<FileHistoryBySaaS> fileHistoryVisualize(@RequestBody EventIdRequest eventIdRequest){
+        long eventId = eventIdRequest.getEventId();
+        FileHistoryBySaaS fileHistoryBySaaS = fileVisualizeService.getFileHistoryBySaaS(eventId);
+        return ResponseDto.ofSuccess(fileHistoryBySaaS);
+    }
+
+    @GetMapping("/scan")
+    public ResponseDto<FileListResponse> getFileList(@RequestBody OrgIdRequest orgIdRequest) {
+        try {
+            long orgId = orgIdRequest.getOrgId();
+            FileListResponse fileListResponse = fileScanListService.getFileList(orgId);
+            return ResponseDto.ofSuccess(fileListResponse);
+        } catch (Exception e){
+            return ResponseDto.ofFail(e.getMessage());
+        }
     }
 }

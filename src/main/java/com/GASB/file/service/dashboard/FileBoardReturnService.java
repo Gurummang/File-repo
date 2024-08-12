@@ -3,9 +3,7 @@ package com.GASB.file.service.dashboard;
 import com.GASB.file.model.dto.response.dashboard.FileDashboardDto;
 import com.GASB.file.model.dto.response.dashboard.StatisticsDto;
 import com.GASB.file.model.dto.response.dashboard.TotalTypeDto;
-import com.GASB.file.model.entity.OrgSaaS;
 import com.GASB.file.repository.file.FileUploadRepo;
-import com.GASB.file.repository.org.OrgSaaSRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
