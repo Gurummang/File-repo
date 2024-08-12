@@ -117,15 +117,13 @@ public class FileGroupService {
                     updateFileGroup(activity.getId(), actFileName, actFileType);
 
                     System.out.println("Group name updated to: " + actFileName);
-                    groupUpdated = true;
-                    break;
                 } else {
                     // 그룹 이름을 업데이트하지 않음
                     updateFileGroup(activity.getId(), groupName, actFileType);
                     System.out.println("File grouped under existing group: " + groupName);
-                    groupUpdated = true;
-                    break;
                 }
+                groupUpdated = true;
+                break;
             }
         }
 
