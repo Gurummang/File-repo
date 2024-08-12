@@ -1,6 +1,5 @@
 package com.GASB.file.service.history;
 
-import com.GASB.file.model.dto.response.dashboard.StatisticsDto;
 import com.GASB.file.model.dto.response.history.FileHistoryStatistics;
 import com.GASB.file.model.dto.response.history.FileHistoryTotalDto;
 import com.GASB.file.repository.file.ActivitiesRepo;
