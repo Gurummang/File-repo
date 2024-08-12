@@ -58,13 +58,8 @@ public class FileGroupService {
         String actFileType = determineFileType(activity.getFileName());
         Timestamp actFileTs = Timestamp.valueOf(activity.getEventTs());
 
-        System.out.println("Current File Name: " + actFileName);
-        System.out.println("Current File Type: " + actFileType);
-        System.out.println("Current File Timestamp: " + actFileTs);
-
         // 3. orgId 조회
         long orgId = activity.getUser().getOrgSaaS().getOrg().getId();
-        System.out.println("orgId: " + orgId);
 
         // 4. orgId와 일치하고, type이 동일한 활동들 가져오기 (actId 제외)
         List<Activities> selectedActivities = activitiesRepo.findAll().stream()
@@ -78,23 +73,16 @@ public class FileGroupService {
                 .distinct() // 중복 제거
                 .toList();
 
-        System.out.println("Selected Activities:");
-        selectedActivities.forEach(a -> System.out.println("Activity ID: " + a.getId() + ", File Name: " + a.getFileName() + ", Event Timestamp: " + a.getEventTs()));
-
         // 5. 그룹 이름 추출 및 null과 중복 제거
         Set<String> groupNames = selectedActivities.stream()
                 .map(a -> fileGroupRepo.findGroupNameById(a.getId())) // groupName 조회
                 .filter(Objects::nonNull) // null 제거
                 .collect(Collectors.toSet()); // 중복 제거
 
-        System.out.println("Group Names:");
-        groupNames.forEach(name -> System.out.println("Group Name: " + name));
-
         boolean groupUpdated = false;
 
         for (String groupName : groupNames) {
             double similarity = calculateSimilarity(actFileName, groupName);
-            System.out.println("Comparing with Group Name: " + groupName + ", Similarity: " + similarity);
 
             if (similarity >= SIM_THRESHOLD) {
                 // 그룹의 파일들 중 가장 빠른 타임스탬프 찾기
@@ -107,20 +95,13 @@ public class FileGroupService {
                         .min(Comparator.naturalOrder())
                         .orElse(null);
 
-                System.out.println("Group Name: " + groupName + ", Earliest Timestamp: " + earliestTs);
-
                 if (earliestTs != null && actFileTs.before(earliestTs)) {
-                    System.out.println("Current File Timestamp is earlier than the earliest timestamp of the group.");
-
                     // 현재 그룹 이름을 파일 이름으로 변경
                     groupActivities.forEach(a -> updateFileGroup(a.getId(), actFileName, actFileType));
                     updateFileGroup(activity.getId(), actFileName, actFileType);
-
-                    System.out.println("Group name updated to: " + actFileName);
                 } else {
                     // 그룹 이름을 업데이트하지 않음
                     updateFileGroup(activity.getId(), groupName, actFileType);
-                    System.out.println("File grouped under existing group: " + groupName);
                 }
                 groupUpdated = true;
                 break;
@@ -129,7 +110,6 @@ public class FileGroupService {
 
         // 조건에 맞는 그룹이 없거나 그룹 이름을 업데이트하지 않은 경우, 현재 파일의 그룹을 설정
         if (!groupUpdated) {
-            System.out.println("No similar group found or no timestamp update required.");
             updateFileGroup(activity.getId(), actFileName, actFileType);
         }
     }
@@ -138,9 +118,5 @@ public class FileGroupService {
         // FileGroup 객체를 생성하여 데이터베이스에 저장
         FileGroup fileGroup = new FileGroup(activityId, groupName, groupType); // groupType 추가
         fileGroupRepo.save(fileGroup);
-
-        // 디버깅 출력
-        System.out.println("FileGroup saved: Activity ID = " + activityId + ", Group Name = " + groupName + ", Group Type = " + groupType);
     }
-
 }
