@@ -43,6 +43,37 @@ public class FileGroupService {
         return FilenameUtils.getBaseName(fileName).toLowerCase();  // Convert to lower case for consistency
     }
 
+    // 파일의 확장자를 기반으로 그룹 유형을 결정하는 메서드
+    private String determineFileType(String fileName) {
+        String extension = FilenameUtils.getExtension(fileName).toLowerCase();
+        switch (extension) {
+            case "exe":
+            case "dll":
+            case "elf":
+                return "execute";
+            case "jpg":
+            case "jpeg":
+            case "png":
+            case "gif":
+            case "webp":
+            case "svg":
+                return "image";
+            case "docx":
+            case "hwp":
+            case "doc":
+            case "xls":
+            case "xlsx":
+            case "ppt":
+            case "pptx":
+            case "pdf":
+            case "txt":
+            case "html":
+                return "document";
+            default:
+                return "unknown"; // 기타 확장자는 "unknown"으로 처리
+        }
+    }
+
     public void groupFilesAndSave(long actId) {
         // 1. 파일 ID로 Activities 객체 조회
         Activities activity = activitiesRepo.findById(actId)
@@ -74,7 +105,7 @@ public class FileGroupService {
         System.out.println("Selected Activities:");
         selectedActivities.forEach(a -> System.out.println("Activity ID: " + a.getId() + ", File Name: " + a.getFileName() + ", Event Timestamp: " + a.getEventTs()));
 
-        // 2. 그룹 이름 추출 및 null과 중복 제거
+        // 2. 그룹 이름 및 유형 추출 및 null과 중복 제거
         Set<String> groupNames = selectedActivities.stream()
                 .map(a -> fileGroupRepo.findGroupNameById(a.getId())) // groupName 조회
                 .filter(Objects::nonNull) // null 제거
@@ -83,11 +114,13 @@ public class FileGroupService {
         System.out.println("Group Names:");
         groupNames.forEach(name -> System.out.println("Group Name: " + name));
 
-        // 3. 현재 검사 주체의 파일 이름
+        // 3. 현재 검사 주체의 파일 이름과 확장자
         String actFileName = getFileNameWithoutExtension(activity.getFileName());
+        String actFileType = determineFileType(activity.getFileName());
         Timestamp actFileTs = Timestamp.valueOf(activity.getEventTs());
 
         System.out.println("Current File Name: " + actFileName);
+        System.out.println("Current File Type: " + actFileType);
         System.out.println("Current File Timestamp: " + actFileTs);
 
         // 4. 유사도 0.8 이상인 그룹의 이름을 찾고 그룹의 파일을 업데이트
@@ -97,9 +130,10 @@ public class FileGroupService {
             System.out.println("Comparing with Group Name: " + groupName + ", Similarity: " + similarity);
 
             if (similarity >= SIM_THRESHOLD) {
-                // 그룹의 파일들 중 가장 빠른 타임스탬프 찾기
+                // 그룹의 파일들 중 가장 빠른 타임스탬프 찾기 및 타입 비교
                 List<Activities> groupActivities = selectedActivities.stream()
                         .filter(a -> groupName.equals(fileGroupRepo.findGroupNameById(a.getId())))
+                        .filter(a -> actFileType.equals(determineFileType(a.getFileName()))) // 파일 유형이 일치하는 경우만
                         .toList();
 
                 Timestamp earliestTs = groupActivities.stream()
@@ -113,15 +147,15 @@ public class FileGroupService {
                     System.out.println("Current File Timestamp is earlier than the earliest timestamp of the group.");
 
                     // 현재 그룹 이름을 파일 이름으로 변경
-                    groupActivities.forEach(a -> updateFileGroup(a.getId(), actFileName));
-                    updateFileGroup(activity.getId(), actFileName);
+                    groupActivities.forEach(a -> updateFileGroup(a.getId(), actFileName, actFileType));
+                    updateFileGroup(activity.getId(), actFileName, actFileType);
 
                     System.out.println("Group name updated to: " + actFileName);
                     groupUpdated = true;
                     break; // 그룹이 업데이트 되었으므로 추가 비교 필요 없음
                 } else {
                     // 그룹 이름을 업데이트하지 않음
-                    updateFileGroup(activity.getId(), groupName);
+                    updateFileGroup(activity.getId(), groupName, actFileType);
                     System.out.println("File grouped under existing group: " + groupName);
                     groupUpdated = true;
                     break;
@@ -132,16 +166,18 @@ public class FileGroupService {
         // 조건에 맞는 그룹이 없거나 그룹 이름을 업데이트하지 않은 경우, 현재 파일의 그룹을 설정
         if (!groupUpdated) {
             System.out.println("No similar group found or no timestamp update required.");
-            updateFileGroup(activity.getId(), actFileName);
+            updateFileGroup(activity.getId(), actFileName, actFileType);
         }
     }
 
-    private void updateFileGroup(long activityId, String groupName) {
+    private void updateFileGroup(long activityId, String groupName, String groupType) {
         // FileGroup 객체를 생성하여 데이터베이스에 저장
-        FileGroup fileGroup = new FileGroup(activityId, groupName);
+        FileGroup fileGroup = new FileGroup(activityId, groupName, groupType); // groupType 추가
         fileGroupRepo.save(fileGroup);
 
         // 디버깅 출력
-        System.out.println("FileGroup saved: Activity ID = " + activityId + ", Group Name = " + groupName);
+        System.out.println("FileGroup saved: Activity ID = " + activityId + ", Group Name = " + groupName + ", Group Type = " + groupType);
     }
+
 }
+
