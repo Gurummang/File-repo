@@ -10,10 +10,13 @@ import lombok.Setter;
 @NoArgsConstructor
 @Builder
 public class InnerScanDto {
-    private String step2Detail;
+
+    private MimeTypeDto step1;
+    private String step2;
 
     @Builder
-    public InnerScanDto(String step2Detail){
-        this.step2Detail = step2Detail;
+    public InnerScanDto(MimeTypeDto step1, String step2Detail){
+        this.step1 = step1;
+        this.step2 = step2;
     }
 }

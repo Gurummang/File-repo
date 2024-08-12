@@ -15,6 +15,9 @@ public interface ActivitiesRepo extends JpaRepository<Activities, Long> {
 
     Optional<Activities> findBySaasFileId(String fileId);
 
+    @Query("SELECT a FROM Activities a WHERE a.saasFileId = :saasFileId AND a.eventType = 'file_uploaded'")
+    Activities getActivitiesBySaaSFileId(@Param("saasFileId") String saasFileId);
+
     @Query("SELECT a FROM Activities a WHERE a.user.orgSaaS.org.id = :orgId AND a.fileGroup.groupName = :groupName")
     List<Activities> findByOrgIdAndGroupName(@Param("orgId") long orgId, @Param("groupName") String groupName);
 
