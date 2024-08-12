@@ -21,8 +21,12 @@ public class FileGroup {
     @Column(columnDefinition = "TEXT")
     private String groupName;
 
-    public FileGroup(Long id, String groupName) {
+    @Column(name = "group_type")
+    private String groupType;
+
+    public FileGroup(Long id, String groupName, String groupType) {
         this.id = id;
         this.groupName = groupName;
+        this.groupType = groupType;
     }
 }
