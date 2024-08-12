@@ -20,7 +20,6 @@ public class FileGroupService {
     private final ActivitiesRepo activitiesRepo;
     private final FileGroupRepo fileGroupRepo;
 
-
     @Autowired
     public FileGroupService(ActivitiesRepo activitiesRepo, FileGroupRepo fileGroupRepo) {
         this.activitiesRepo = activitiesRepo;
@@ -54,42 +53,7 @@ public class FileGroupService {
         Activities activity = activitiesRepo.findById(actId)
                 .orElseThrow(() -> new RuntimeException("Activity not found"));
 
-        // 2. monitored_users 조회
-        MonitoredUsers monitoredUsers = activity.getUser();
-
-        // 3. orgSaaS 조회
-        OrgSaaS orgSaaS = monitoredUsers.getOrgSaaS();
-
-        // 4. orgId 조회
-        long orgId = orgSaaS.getOrg().getId();
-        System.out.println("orgId: " + orgId);
-
-        // activities 테이블의 모든 튜플 리스팅
-        List<Activities> activitiesList = activitiesRepo.findAll();
-
-        // 중복 제외한 selectedActivities 리스트 생성
-        List<Activities> selectedActivities = activitiesList.stream()
-                .filter(a -> a.getId() != actId) // 입력받은 actId와 다른 항목만 선택
-                .filter(a -> {
-                    MonitoredUsers otherMonitoredUsers = a.getUser();
-                    return otherMonitoredUsers != null && otherMonitoredUsers.getOrgSaaS().getOrg().getId() == orgId;
-                })
-                .distinct() // 중복 제거
-                .toList();
-
-        System.out.println("Selected Activities:");
-        selectedActivities.forEach(a -> System.out.println("Activity ID: " + a.getId() + ", File Name: " + a.getFileName() + ", Event Timestamp: " + a.getEventTs()));
-
-        // 2. 그룹 이름 및 유형 추출 및 null과 중복 제거
-        Set<String> groupNames = selectedActivities.stream()
-                .map(a -> fileGroupRepo.findGroupNameById(a.getId())) // groupName 조회
-                .filter(Objects::nonNull) // null 제거
-                .collect(Collectors.toSet()); // 중복 제거
-
-        System.out.println("Group Names:");
-        groupNames.forEach(name -> System.out.println("Group Name: " + name));
-
-        // 3. 현재 검사 주체의 파일 이름과 확장자
+        // 2. 현재 검사 주체의 파일 이름과 확장자
         String actFileName = getFileNameWithoutExtension(activity.getFileName());
         String actFileType = determineFileType(activity.getFileName());
         Timestamp actFileTs = Timestamp.valueOf(activity.getEventTs());
@@ -97,6 +61,34 @@ public class FileGroupService {
         System.out.println("Current File Name: " + actFileName);
         System.out.println("Current File Type: " + actFileType);
         System.out.println("Current File Timestamp: " + actFileTs);
+
+        // 3. orgId 조회
+        long orgId = activity.getUser().getOrgSaaS().getOrg().getId();
+        System.out.println("orgId: " + orgId);
+
+        // 4. orgId와 일치하고, type이 동일한 활동들 가져오기 (actId 제외)
+        List<Activities> selectedActivities = activitiesRepo.findAll().stream()
+                .filter(a -> a.getId() != actId) // 현재 파일을 제외
+                .filter(a -> {
+                    MonitoredUsers otherMonitoredUsers = a.getUser();
+                    return otherMonitoredUsers != null &&
+                            otherMonitoredUsers.getOrgSaaS().getOrg().getId() == orgId &&
+                            determineFileType(a.getFileName()).equals(actFileType); // 타입 일치
+                })
+                .distinct() // 중복 제거
+                .toList();
+
+        System.out.println("Selected Activities:");
+        selectedActivities.forEach(a -> System.out.println("Activity ID: " + a.getId() + ", File Name: " + a.getFileName() + ", Event Timestamp: " + a.getEventTs()));
+
+        // 5. 그룹 이름 추출 및 null과 중복 제거
+        Set<String> groupNames = selectedActivities.stream()
+                .map(a -> fileGroupRepo.findGroupNameById(a.getId())) // groupName 조회
+                .filter(Objects::nonNull) // null 제거
+                .collect(Collectors.toSet()); // 중복 제거
+
+        System.out.println("Group Names:");
+        groupNames.forEach(name -> System.out.println("Group Name: " + name));
 
         boolean groupUpdated = false;
 
@@ -110,15 +102,6 @@ public class FileGroupService {
                         .filter(a -> groupName.equals(fileGroupRepo.findGroupNameById(a.getId())))
                         .toList();
 
-                String groupFileType = determineFileType(groupActivities.get(0).getFileName());
-                if (!actFileType.equals(groupFileType)) {
-                    // 타입이 다를 경우 새로운 그룹 생성
-                    System.out.println("File type mismatch. Creating a new group.");
-                    updateFileGroup(activity.getId(), actFileName, actFileType);
-                    groupUpdated = true;
-                    break;
-                }
-
                 Timestamp earliestTs = groupActivities.stream()
                         .map(a -> Timestamp.valueOf(a.getEventTs()))
                         .min(Comparator.naturalOrder())
@@ -126,7 +109,7 @@ public class FileGroupService {
 
                 System.out.println("Group Name: " + groupName + ", Earliest Timestamp: " + earliestTs);
 
-                if (actFileTs.before(earliestTs)) {
+                if (earliestTs != null && actFileTs.before(earliestTs)) {
                     System.out.println("Current File Timestamp is earlier than the earliest timestamp of the group.");
 
                     // 현재 그룹 이름을 파일 이름으로 변경
