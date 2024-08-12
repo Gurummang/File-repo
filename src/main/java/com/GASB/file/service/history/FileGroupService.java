@@ -3,8 +3,6 @@ package com.GASB.file.service.history;
 import com.GASB.file.model.entity.*;
 import com.GASB.file.repository.file.ActivitiesRepo;
 import com.GASB.file.repository.file.FileGroupRepo;
-import com.GASB.file.repository.org.OrgSaaSRepo;
-import com.GASB.file.repository.user.SlackUserRepo;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.text.similarity.JaroWinklerSimilarity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,15 +19,12 @@ public class FileGroupService {
 
     private final ActivitiesRepo activitiesRepo;
     private final FileGroupRepo fileGroupRepo;
-    private final OrgSaaSRepo orgSaaSRepo;
-    private final SlackUserRepo slackUserRepo;
+
 
     @Autowired
-    public FileGroupService(ActivitiesRepo activitiesRepo, FileGroupRepo fileGroupRepo, OrgSaaSRepo orgSaaSRepo, SlackUserRepo slackUserRepo) {
+    public FileGroupService(ActivitiesRepo activitiesRepo, FileGroupRepo fileGroupRepo) {
         this.activitiesRepo = activitiesRepo;
         this.fileGroupRepo = fileGroupRepo;
-        this.orgSaaSRepo = orgSaaSRepo;
-        this.slackUserRepo = slackUserRepo;
     }
 
     // 유사도 측정 메서드
@@ -46,32 +41,12 @@ public class FileGroupService {
     // 파일의 확장자를 기반으로 그룹 유형을 결정하는 메서드
     private String determineFileType(String fileName) {
         String extension = FilenameUtils.getExtension(fileName).toLowerCase();
-        switch (extension) {
-            case "exe":
-            case "dll":
-            case "elf":
-                return "execute";
-            case "jpg":
-            case "jpeg":
-            case "png":
-            case "gif":
-            case "webp":
-            case "svg":
-                return "image";
-            case "docx":
-            case "hwp":
-            case "doc":
-            case "xls":
-            case "xlsx":
-            case "ppt":
-            case "pptx":
-            case "pdf":
-            case "txt":
-            case "html":
-                return "document";
-            default:
-                return "unknown"; // 기타 확장자는 "unknown"으로 처리
-        }
+        return switch (extension) {
+            case "exe", "dll", "elf" -> "execute";
+            case "jpg", "jpeg", "png", "gif", "webp", "svg" -> "image";
+            case "docx", "hwp", "doc", "xls", "xlsx", "ppt", "pptx", "pdf", "txt", "html" -> "document";
+            default -> "unknown"; // 기타 확장자는 "unknown"으로 처리
+        };
     }
 
     public void groupFilesAndSave(long actId) {
@@ -151,7 +126,7 @@ public class FileGroupService {
 
                 System.out.println("Group Name: " + groupName + ", Earliest Timestamp: " + earliestTs);
 
-                if (earliestTs != null && actFileTs.before(earliestTs)) {
+                if (actFileTs.before(earliestTs)) {
                     System.out.println("Current File Timestamp is earlier than the earliest timestamp of the group.");
 
                     // 현재 그룹 이름을 파일 이름으로 변경
