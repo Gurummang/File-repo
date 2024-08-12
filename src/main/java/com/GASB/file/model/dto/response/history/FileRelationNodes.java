@@ -21,4 +21,5 @@ public class FileRelationNodes {
     private LocalDateTime eventTs;
     private String email;
     private String uploadChannel;
+    private double similarity;
 }
