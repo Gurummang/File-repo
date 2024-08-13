@@ -5,13 +5,17 @@ import com.GASB.file.model.entity.Activities;
 import com.GASB.file.repository.file.ActivitiesRepo;
 import com.GASB.file.repository.file.FileGroupRepo;
 import com.GASB.file.repository.file.FileUploadRepo;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class FileVisualizeService {
 
     private final ActivitiesRepo activitiesRepo;
@@ -19,34 +23,84 @@ public class FileVisualizeService {
     private final FileGroupRepo fileGroupRepo;
     private final FileSimilarService fileSimilarService;
 
-    public FileVisualizeService(ActivitiesRepo activitiesRepo, FileUploadRepo fileUploadRepo, FileGroupRepo fileGroupRepo, FileSimilarService fileSimilarService){
+    public FileVisualizeService(ActivitiesRepo activitiesRepo, FileUploadRepo fileUploadRepo, FileGroupRepo fileGroupRepo, FileSimilarService fileSimilarService) {
         this.activitiesRepo = activitiesRepo;
         this.fileUploadRepo = fileUploadRepo;
         this.fileGroupRepo = fileGroupRepo;
         this.fileSimilarService = fileSimilarService;
     }
 
+    private List<FileRelationEdges> filterTransitiveEdges(List<FileRelationEdges> edges) {
+        // Maps to track adjacency and labels
+        Map<Long, Set<Long>> adjacencyMap = new HashMap<>();
+        Map<String, Set<String>> edgeLabelsMap = new HashMap<>();
+
+        // Build adjacency and label maps
+        for (FileRelationEdges edge : edges) {
+            adjacencyMap
+                    .computeIfAbsent(edge.getSource(), k -> new HashSet<>())
+                    .add(edge.getTarget());
+            edgeLabelsMap.computeIfAbsent(edge.getSource() + "-" + edge.getTarget(), k -> new HashSet<>()).add(edge.getLabel());
+        }
+
+        // Set to track filtered edges
+        Set<String> filteredEdges = new HashSet<>();
+
+        // Add only non-transitive edges
+        for (FileRelationEdges edge : edges) {
+            if (!isTransitive(edge.getSource(), edge.getTarget(), adjacencyMap)) {
+                filteredEdges.add(edge.getSource() + "-" + edge.getTarget());
+            }
+        }
+
+        // Construct final list of edges
+        return filteredEdges.stream()
+                .map(edgeKey -> {
+                    String[] parts = edgeKey.split("-");
+                    // Retrieve the appropriate label from edgeLabelsMap (assuming one label per edge)
+                    String label = edgeLabelsMap.get(edgeKey).iterator().next();
+                    return new FileRelationEdges(Long.parseLong(parts[0]), Long.parseLong(parts[1]), label);
+                })
+                .collect(Collectors.toList());
+    }
+
+    private boolean isTransitive(Long source, Long target, Map<Long, Set<Long>> adjacencyMap) {
+        if (!adjacencyMap.containsKey(source)) return false;
+
+        Set<Long> directTargets = adjacencyMap.get(source);
+        for (Long intermediate : directTargets) {
+            if (adjacencyMap.containsKey(intermediate) && adjacencyMap.get(intermediate).contains(target)) {
+                return true; // Transitive relationship found
+            }
+        }
+        return false;
+    }
+
     public FileHistoryBySaaS getFileHistoryBySaaS(long eventId) {
         Activities activity = getActivity(eventId);
-        Map<String, List<FileRelationNodes>> fileHistoryMap = initializeFileHistoryMap();
+        Activities startActivity = activitiesRepo.getActivitiesBySaaSFileId(activity.getSaasFileId());
 
-        Set<Long> seenEventIds = new HashSet<>();
+        Map<String, List<FileRelationNodes>> fileHistoryMap = initializeFileHistoryMap();
         Map<Long, FileRelationNodes> nodesMap = new HashMap<>();
         List<FileRelationEdges> edges = new ArrayList<>();
-        int maxDepth = 2;
+        Set<Long> seenEventIds = new HashSet<>();
 
-        exploreFileRelationsBFS(activity, maxDepth, seenEventIds, nodesMap, edges);
+        exploreFileRelationsDFS(startActivity, 2, seenEventIds, nodesMap, edges);
 
-        String saasName = getSaasName(activity);
+        String saasName = getSaasName(startActivity);
         List<FileRelationNodes> nodesList = new ArrayList<>(nodesMap.values());
         populateFileHistoryMap(fileHistoryMap, saasName, nodesList);
+
+        // Filter out transitive edges
+        List<FileRelationEdges> filteredEdges = filterTransitiveEdges(edges);
 
         return FileHistoryBySaaS.builder()
                 .slack(fileHistoryMap.get("slack"))
                 .googleDrive(fileHistoryMap.get("googleDrive"))
-                .edges(edges)
+                .edges(filteredEdges)
                 .build();
     }
+
 
     private Activities getActivity(long eventId) {
         return activitiesRepo.findById(eventId)
@@ -72,86 +126,73 @@ public class FileVisualizeService {
         }
     }
 
-    private void exploreFileRelationsBFS(Activities startActivity, int maxDepth, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap, List<FileRelationEdges> edges) {
-        Queue<ExplorationNode> queue = new LinkedList<>();
-        queue.add(new ExplorationNode(startActivity, 0));
+    private void exploreFileRelationsDFS(Activities startActivity, int maxDepth, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap, List<FileRelationEdges> edges) {
+        if (maxDepth < 0) return;
 
-        while (!queue.isEmpty()) {
-            ExplorationNode currentNode = queue.poll();
-            Activities currentActivity = currentNode.getActivity();
-            int currentDepth = currentNode.getDepth();
+        // 현재 활동 처리
+        processCurrentActivity(startActivity, seenEventIds, nodesMap);
 
-            if (currentDepth > maxDepth || seenEventIds.contains(currentActivity.getId())) {
-                continue;
-            }
+        // SaaSFileID로 일치하는 활동 목록
+        List<Activities> sameSaasFiles = activitiesRepo.findListBySaasFileId(startActivity.getSaasFileId());
+        System.out.println("sameSaasFiles:");
+        sameSaasFiles.forEach(activity -> System.out.println(activity.getId()));
+        // Hash로 일치하는 활동 목록 중 eventType이 'file_uploaded'인 것들만 필터링
+        List<Activities> sameHashFiles = activitiesRepo.findByHash(getSaltedHash(startActivity));
 
-            processCurrentActivity(currentActivity, startActivity.getId(), seenEventIds, nodesMap, edges);
-            queue.addAll(findRelatedActivities(currentActivity, startActivity.getId(), seenEventIds, queue, edges));
-        }
+        // sameHashFiles 리스트 출력
+        System.out.println("sameHashFiles:");
+        sameHashFiles.forEach(activity -> System.out.println(activity.getId()));  // 활동 객체의 toString() 메서드를 통해 상세 정보를 출력
 
-        addGroupRelatedActivities(startActivity, seenEventIds, nodesMap);
+        // SaaSFileID가 일치하는 활동을 sameHashFiles에서 제거
+        sameHashFiles.removeAll(sameSaasFiles);
+        System.out.println("removeAllsameHashFiles:");
+        sameHashFiles.forEach(activity -> System.out.println(activity.getId()));
+
+        // SaaSFileID로 일치하는 활동들에 대해 연결 추가
+        addRelatedActivities(sameSaasFiles, startActivity, seenEventIds, nodesMap, edges, "File_SaaS_Match", maxDepth);
+
+        // Hash로 일치하는 활동들에 대해 연결 추가
+        addRelatedActivities(sameHashFiles, startActivity, seenEventIds, nodesMap, edges, "File_Hash_Match", maxDepth);
     }
 
-    private void processCurrentActivity(Activities currentActivity, long startActivityId, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap, List<FileRelationEdges> edges) {
-        seenEventIds.add(currentActivity.getId());
-        FileRelationNodes currentFileNode = createFileRelationNodes(currentActivity, startActivityId);
-        nodesMap.putIfAbsent(currentActivity.getId(), currentFileNode);
-    }
 
-    private List<ExplorationNode> findRelatedActivities(Activities currentActivity, long startActivityId, Set<Long> seenEventIds, Queue<ExplorationNode> queue, List<FileRelationEdges> edges) {
-        List<ExplorationNode> additionalNodes = new ArrayList<>();
 
-        addSaasFileIdMatches(currentActivity, startActivityId, seenEventIds, edges, additionalNodes);
-        addHashMatches(currentActivity, startActivityId, seenEventIds, additionalNodes);
 
-        return additionalNodes;
-    }
+    private void addRelatedActivities(List<Activities> relatedActivities, Activities startActivity, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap, List<FileRelationEdges> edges, String edgeType, int currentDepth) {
+        for (Activities relatedActivity : relatedActivities) {
+            if (!seenEventIds.contains(relatedActivity.getId()) && !relatedActivity.getId().equals(startActivity.getId())) {
+                FileRelationNodes targetNode = createFileRelationNodes(relatedActivity);
+                nodesMap.putIfAbsent(relatedActivity.getId(), targetNode);
 
-    private void addSaasFileIdMatches(Activities currentActivity, long startActivityId, Set<Long> seenEventIds, List<FileRelationEdges> edges, List<ExplorationNode> additionalNodes) {
-        if (currentActivity.getSaasFileId() != null) {
-            List<Activities> sameSaasFiles = activitiesRepo.findListBySaasFileId(currentActivity.getSaasFileId());
-            for (Activities a : sameSaasFiles) {
-                if (!seenEventIds.contains(a.getId()) && !a.getId().equals(currentActivity.getId())) {
-                    FileRelationNodes targetNode = createFileRelationNodes(a, startActivityId);
-                    additionalNodes.add(new ExplorationNode(a, 1));
-                    edges.add(new FileRelationEdges(currentActivity.getId(), a.getId(), "SaaS_FileId_Match"));
+                // 엣지 추가
+                edges.add(new FileRelationEdges(startActivity.getId(), relatedActivity.getId(), edgeType));
+
+                // DFS 탐색 계속 진행 (depth 감소)
+                if (currentDepth > 0) {
+                    exploreFileRelationsDFS(relatedActivity, currentDepth - 1, seenEventIds, nodesMap, edges);
                 }
             }
         }
     }
 
-    private void addHashMatches(Activities currentActivity, long startActivityId, Set<Long> seenEventIds, List<ExplorationNode> additionalNodes) {
-        String hash = getSaltedHash(currentActivity.getUser().getOrgSaaS().getId(), currentActivity.getSaasFileId());
-        List<Activities> sameHashFiles = activitiesRepo.findByHash(hash);
-        for (Activities a : sameHashFiles) {
-            if (!seenEventIds.contains(a.getId()) && !a.getId().equals(currentActivity.getId())) {
-                FileRelationNodes targetNode = createFileRelationNodes(a, startActivityId);
-                additionalNodes.add(new ExplorationNode(a, 1));
-            }
-        }
+
+    private void processCurrentActivity(Activities activity, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap) {
+        seenEventIds.add(activity.getId());
+        FileRelationNodes node = createFileRelationNodes(activity);
+        nodesMap.putIfAbsent(activity.getId(), node);
     }
 
-    private void addGroupRelatedActivities(Activities startActivity, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap) {
-        String groupName = fileGroupRepo.findGroupNameById(startActivity.getId());
-        long orgId = activitiesRepo.findOrgIdByActivityId(startActivity.getId());
-        List<Activities> sameGroups = activitiesRepo.findByOrgIdAndGroupName(orgId, groupName);
-        for (Activities a : sameGroups) {
-            if (!seenEventIds.contains(a.getId()) && !a.getId().equals(startActivity.getId())) {
-                FileRelationNodes targetNode = createFileRelationNodes(a, startActivity.getId());
-                nodesMap.putIfAbsent(a.getId(), targetNode);
-            }
-        }
-    }
 
-    private FileRelationNodes createFileRelationNodes(Activities activity, long actId) {
-        double similar = fileSimilarService.getFileSimilarity(actId, activity.getId());
-        BigDecimal roundedSimilarity = new BigDecimal(similar).setScale(2, RoundingMode.HALF_UP);
+
+    private FileRelationNodes createFileRelationNodes(Activities activity) {
+        double similarity = fileSimilarService.getFileSimilarity(activity.getId(), activity.getId());
+        BigDecimal roundedSimilarity = new BigDecimal(similarity).setScale(2, RoundingMode.HALF_UP);
         return FileRelationNodes.builder()
                 .eventId(activity.getId())
                 .saas(activity.getUser().getOrgSaaS().getSaas().getSaasName())
                 .eventType(activity.getEventType())
                 .fileName(activity.getFileName())
-                .hash256(getSaltedHash(activity.getUser().getOrgSaaS().getId(), activity.getSaasFileId()))
+                .hash256(getSaltedHash(activity))
                 .saasFileId(activity.getSaasFileId())
                 .eventTs(activity.getEventTs())
                 .email(activity.getUser().getEmail())
@@ -160,9 +201,7 @@ public class FileVisualizeService {
                 .build();
     }
 
-    private String getSaltedHash(long orgSaaSId, String saasFileId) {
-        return fileUploadRepo.findHashByOrgSaaS_IdAndSaasFileId(orgSaaSId, saasFileId);
+    private String getSaltedHash(Activities activity) {
+        return fileUploadRepo.findHashByOrgSaaS_IdAndSaasFileId(activity.getUser().getOrgSaaS().getId(), activity.getSaasFileId(), activity.getEventTs());
     }
 }
-
-

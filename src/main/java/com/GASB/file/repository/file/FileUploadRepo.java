@@ -85,6 +85,6 @@ public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
     @Query("SELECT f.timestamp FROM FileUpload f WHERE f.orgSaaS.id = :orgSaaSId AND f.saasFileId = :saasFileId")
     LocalDateTime findUploadTsByOrgSaaS_IdAndSaasFileId(long orgSaaSId, String saasFileId);
 
-    @Query("SELECT f.hash FROM FileUpload f WHERE f.orgSaaS.id = :orgSaaSId AND f.saasFileId = :saasFileId")
-    String findHashByOrgSaaS_IdAndSaasFileId(@Param("orgSaaSId") long orgSaaSId, @Param("saasFileId") String saasFileId);
+    @Query("SELECT f.hash FROM FileUpload f WHERE f.orgSaaS.id = :orgSaaSId AND f.saasFileId = :saasFileId AND f.timestamp = :eventTs")
+    String findHashByOrgSaaS_IdAndSaasFileId(@Param("orgSaaSId") long orgSaaSId, @Param("saasFileId") String saasFileId, @Param("eventTs") LocalDateTime eventTs);
 }
