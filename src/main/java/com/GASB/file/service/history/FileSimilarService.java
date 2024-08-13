@@ -29,8 +29,48 @@ public class FileSimilarService {
     }
 
     // 파일네임에서 확장자 제거
-    private String noExtesion(String fileName) {
+    private String noExtension(String fileName) {
         return FilenameUtils.getBaseName(fileName).toLowerCase();  // Convert to lower case for consistency
+    }
+
+    private String determineExtension(String extension) {
+        return switch (extension) {
+            // document
+            case "doc", "docx", "hwp" -> "group_doc";
+            case "ppt", "pptx" -> "group_ppt";
+            case "xls", "xlsx", "csv" -> "group_excel";
+            case "pdf" -> "group_pdf";
+            case "txt" -> "group_txt";
+            // image
+            case "jpg", "jpeg", "png", "webp" -> "group_snap";
+            case "gif" -> "group_gif";
+            case "svg" -> "group_svg";
+            // exe
+            case "exe" -> "group_exe";
+            case "dll" -> "group_dll";
+            case "elf" -> "group_elf";
+            // default
+            default -> "Unknown";
+        };
+    }
+
+    // 파일 확장자의 연관성 계산 메서드
+    private double typeSim(String ext1, String ext2) {
+        String group1 = determineExtension(ext1);
+        String group2 = determineExtension(ext2);
+
+        if (group1.equals(group2)) {
+            return 1.0;  // 같은 그룹 내에서는 유사도 1.0
+        }
+
+        // PDF는 0.7
+        if ((group1.equals("group_pdf") && (group2.equals("group_doc") || group2.equals("group_ppt") || group2.equals("group_excel")))
+                || (group2.equals("group_pdf") && (group1.equals("group_doc") || group1.equals("group_ppt") || group1.equals("group_excel")))) {
+            return 0.7;
+        }
+
+        // 다른 그룹 간의 유사도 0.4
+        return 0.4;
     }
 
     public double getFileSimilarity(Long actId, Long cmpId) {
@@ -39,36 +79,37 @@ public class FileSimilarService {
         Optional<Activities> activity = activitiesRepo.findById(actId);
         Optional<Activities> cmpAct = activitiesRepo.findById(cmpId);
         if (activity.isEmpty() || cmpAct.isEmpty()) {
-            System.out.println("Not found for ID");
-            return 404;
+            return 404; // 해당 객체가 없음
         }
 
-        // 2. actId의 그룹에 cmpId가 속해있는지
+        // 2. actId의 그룹에 cmpId가 속해있는지 확인
         Optional<FileGroup> actGroupOpt = fileGroupRepo.findById(actId);
         Optional<FileGroup> cmpGroupOpt = fileGroupRepo.findById(cmpId);
+
+        if (actGroupOpt.isEmpty() || cmpGroupOpt.isEmpty()) {
+            return 505; // 해당 객체의 그룹이 없음
+        }
+
         // Optional에서 그룹 이름 추출
         String actGroupName = actGroupOpt.map(FileGroup::getGroupName).orElse("Unknown");
         String cmpGroupName = cmpGroupOpt.map(FileGroup::getGroupName).orElse("Unknown");
 
-
-        if (actGroupOpt.isEmpty() || cmpGroupOpt.isEmpty()) {
-            System.out.println("Not Found Group for ID");
-            return 505;
-        }
-
         // 그룹 이름이 일치하지 않는 경우
         if (!actGroupName.equals(cmpGroupName)) {
-            System.out.println("Group Name Mismatch");
-            return 606;
+            return 606; // 그룹 이름이 일치하지 않음
         }
 
-        // 3. act와 cmp의 fileName (확장자 제거한 이름)
-        String actFileName = noExtesion(activity.get().getFileName());
-        String cmpFileName = noExtesion(cmpAct.get().getFileName());
+        // 3. 확장자 추출 및 유사도 계산
+        String actExtension = FilenameUtils.getExtension(activity.get().getFileName()).toLowerCase();
+        String cmpExtension = FilenameUtils.getExtension(cmpAct.get().getFileName()).toLowerCase();
+        double typeSimilarity = typeSim(actExtension, cmpExtension);
 
-        // 4. actFileName과 cmpFileName의 유사도 측정
-        double similarity = calculateSim(actFileName, cmpFileName);
+        // 4. 파일 이름 유사도 계산
+        String actFileName = noExtension(activity.get().getFileName());
+        String cmpFileName = noExtension(cmpAct.get().getFileName());
+        double nameSimilarity = calculateSim(actFileName, cmpFileName);
 
-        return similarity;
+        // 5. 총 유사도 계산 (이름 유사도 60% + 확장자 유사도 40%)
+        return (nameSimilarity * 0.6) + (typeSimilarity * 0.4);
     }
 }
