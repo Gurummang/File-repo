@@ -50,7 +50,7 @@ public class FileController {
         return ResponseDto.ofSuccess(fileDashboard);
     }
 
-    @GetMapping("/history")
+    @PostMapping("/history")
     public ResponseDto<List<FileHistoryListDto>> fileHistoryList(@RequestBody OrgIdRequest orgIdRequest){
         long orgId = orgIdRequest.getOrgId();
         List<FileHistoryListDto> fileHistory = fileHistoryService.historyListReturn(orgId);
@@ -58,21 +58,21 @@ public class FileController {
         return ResponseDto.ofSuccess(fileHistory);
     }
 
-    @GetMapping("/history/statistics")
+    @PostMapping("/history/statistics")
     public ResponseDto<FileHistoryTotalDto> fileHistoryStatisticsList(@RequestBody OrgIdRequest orgIdRequest){
         long orgId = orgIdRequest.getOrgId();
         FileHistoryTotalDto fileHistoryStatistics = fileHistoryStatisticsService.eventStatistics(orgId);
         return ResponseDto.ofSuccess(fileHistoryStatistics);
     }
 
-    @GetMapping("/history/visualize")
+    @PostMapping("/history/visualize")
     public ResponseDto<FileHistoryBySaaS> fileHistoryVisualize(@RequestBody EventIdRequest eventIdRequest){
         long eventId = eventIdRequest.getEventId();
         FileHistoryBySaaS fileHistoryBySaaS = fileVisualizeService.getFileHistoryBySaaS(eventId);
         return ResponseDto.ofSuccess(fileHistoryBySaaS);
     }
 
-    @GetMapping("/scan")
+    @PostMapping("/scan")
     public ResponseDto<FileListResponse> getFileList(@RequestBody OrgIdRequest orgIdRequest) {
         try {
             long orgId = orgIdRequest.getOrgId();
