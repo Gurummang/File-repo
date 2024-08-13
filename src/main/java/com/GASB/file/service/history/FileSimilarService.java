@@ -63,14 +63,13 @@ public class FileSimilarService {
             return 1.0;  // 같은 그룹 내에서는 유사도 1.0
         }
 
-        // PDF와 다른 그룹 간의 유사도 0.8
+        // PDF는 0.7
         if ((group1.equals("group_pdf") && (group2.equals("group_doc") || group2.equals("group_ppt") || group2.equals("group_excel")))
                 || (group2.equals("group_pdf") && (group1.equals("group_doc") || group1.equals("group_ppt") || group1.equals("group_excel")))) {
             return 0.7;
         }
 
-
-        // 다른 그룹 간의 유사도 0.6
+        // 다른 그룹 간의 유사도 0.4
         return 0.4;
     }
 
@@ -80,7 +79,6 @@ public class FileSimilarService {
         Optional<Activities> activity = activitiesRepo.findById(actId);
         Optional<Activities> cmpAct = activitiesRepo.findById(cmpId);
         if (activity.isEmpty() || cmpAct.isEmpty()) {
-//            System.out.println("Not found for ID");
             return 404; // 해당 객체가 없음
         }
 
@@ -89,7 +87,6 @@ public class FileSimilarService {
         Optional<FileGroup> cmpGroupOpt = fileGroupRepo.findById(cmpId);
 
         if (actGroupOpt.isEmpty() || cmpGroupOpt.isEmpty()) {
-//            System.out.println("Not Found Group for ID");
             return 505; // 해당 객체의 그룹이 없음
         }
 
@@ -99,7 +96,6 @@ public class FileSimilarService {
 
         // 그룹 이름이 일치하지 않는 경우
         if (!actGroupName.equals(cmpGroupName)) {
-//            System.out.println("Group Name Mismatch");
             return 606; // 그룹 이름이 일치하지 않음
         }
 
@@ -114,12 +110,6 @@ public class FileSimilarService {
         double nameSimilarity = calculateSim(actFileName, cmpFileName);
 
         // 5. 총 유사도 계산 (이름 유사도 60% + 확장자 유사도 40%)
-        double totalSimilarity = (nameSimilarity * 0.6) + (typeSimilarity * 0.4);
-
-//        System.out.println("Name Similarity: " + nameSimilarity);
-//        System.out.println("Type Similarity: " + typeSimilarity);
-//        System.out.println("Total Similarity: " + totalSimilarity);
-
-        return totalSimilarity;
+        return (nameSimilarity * 0.6) + (typeSimilarity * 0.4);
     }
 }
