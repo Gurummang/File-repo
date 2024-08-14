@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -95,7 +94,8 @@ public class FileVisualizeService {
         Set<Long> seenEventIds = new HashSet<>();
 
         //DFS를 통해 파일 간의 관계를 탐색하고, 노드 및 엣지 정보를 갱신합니다.
-        exploreFileRelationsDFS(startActivity, 2, seenEventIds, nodesMap, edges);
+        exploreFileRelationsDFS(startActivity, 2, seenEventIds, nodesMap, edges, eventId);
+        addGroupRelatedActivities(eventId,seenEventIds,nodesMap);
 
         String saasName = getSaasName(startActivity);
         List<FileRelationNodes> nodesList = new ArrayList<>(nodesMap.values());
@@ -111,6 +111,17 @@ public class FileVisualizeService {
                 .build();
     }
 
+    private void addGroupRelatedActivities(long eventId, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap) {
+        String groupName = fileGroupRepo.findGroupNameById(eventId);
+        long orgId = activitiesRepo.findOrgIdByActivityId(eventId);
+        List<Activities> sameGroups = activitiesRepo.findByOrgIdAndGroupName(orgId, groupName);
+        for (Activities a : sameGroups) {
+            if (!seenEventIds.contains(a.getId()) && !a.getId().equals(eventId)) {
+                FileRelationNodes targetNode = createFileRelationNodes(a, eventId);
+                nodesMap.putIfAbsent(a.getId(), targetNode);
+            }
+        }
+    }
 
     private Activities getActivity(long eventId) {
         return activitiesRepo.findById(eventId)
@@ -131,6 +142,10 @@ public class FileVisualizeService {
 
     // SaaS 이름에 따라 해당 리스트에 노드 정보를 추가
     private void populateFileHistoryMap(Map<String, List<FileRelationNodes>> fileHistoryMap, String saasName, List<FileRelationNodes> nodesList) {
+        // nodesList를 eventTs 필드를 기준으로 오름차순 정렬
+        nodesList.sort(Comparator.comparing(FileRelationNodes::getEventTs));
+
+        // saasName에 따라 파일 히스토리 맵에 정렬된 노드 리스트를 추가
         if ("slack".equals(saasName)) {
             fileHistoryMap.get("slack").addAll(nodesList);
         } else if ("googledrive".equals(saasName)) {
@@ -141,7 +156,7 @@ public class FileVisualizeService {
     //현재 활동을 처리하고, 이미 탐색된 활동을 추적하여 중복을 방지합니다.
     //SaaSFileID와 해시 값이 일치하는 활동들을 탐색하여 엣지를 추가합니다.
     //재귀적으로 깊이를 줄여가며 탐색을 진행합니다.
-    private void exploreFileRelationsDFS(Activities startActivity, int maxDepth, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap, List<FileRelationEdges> edges) {
+    private void exploreFileRelationsDFS(Activities startActivity, int maxDepth, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap, List<FileRelationEdges> edges, long eventId) {
         if (maxDepth < 0) return;
 
         // 현재 활동 처리
@@ -171,7 +186,7 @@ public class FileVisualizeService {
         }
 
         // 연관된 활동들에 대한 처리
-        processRelatedActivities(newInitialActivity, sameSaasFiles, sameHashFiles, seenEventIds, nodesMap, edges, maxDepth);
+        processRelatedActivities(newInitialActivity, sameSaasFiles, sameHashFiles, seenEventIds, nodesMap, edges, maxDepth, eventId);
     }
 
     private Activities determineInitialActivity(Activities startActivity, Set<Long> seenEventIds) {
@@ -213,33 +228,26 @@ public class FileVisualizeService {
         return initialActivity;
     }
 
-    private void processRelatedActivities(Activities initialActivity, List<Activities> sameSaasFiles, List<Activities> sameHashFiles, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap, List<FileRelationEdges> edges, int maxDepth) {
-        // processCurrentActivity(newInitialActivity, seenEventIds, nodesMap);
-
+    private void processRelatedActivities(Activities initialActivity, List<Activities> sameSaasFiles, List<Activities> sameHashFiles, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap, List<FileRelationEdges> edges, int maxDepth, long eventId) {
         // SaaSFileID로 일치하는 활동들에 대해 연결 추가
-        addRelatedActivities(sameSaasFiles, initialActivity, seenEventIds, nodesMap, edges, "File_SaaS_Match", maxDepth);
+        addRelatedActivities(sameSaasFiles, initialActivity, seenEventIds, nodesMap, edges, "File_SaaS_Match", maxDepth, eventId);
 
         // Hash로 일치하는 활동들에 대해 연결 추가
-        addRelatedActivities(sameHashFiles, initialActivity, seenEventIds, nodesMap, edges, "File_Hash_Match", maxDepth);
+        addRelatedActivities(sameHashFiles, initialActivity, seenEventIds, nodesMap, edges, "File_Hash_Match", maxDepth, eventId);
     }
-
-
-
-
-
 
     //주어진 활동들에 대해 노드를 생성하고, 엣지를 추가합니다.
     //재귀적으로 DFS 탐색을 진행하여 연결 관계를 계속해서 추적합니다.
-    private void addRelatedActivities(List<Activities> relatedActivities, Activities startActivity, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap, List<FileRelationEdges> edges, String edgeType, int currentDepth) {
+    private void addRelatedActivities(List<Activities> relatedActivities, Activities startActivity, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap, List<FileRelationEdges> edges, String edgeType, int currentDepth, long eventId) {
         // 활동 리스트를 이벤트 발생 시간 기준으로 정렬 (오름차순)
         System.out.println("startACtivity:" + startActivity.getId());
-        processCurrentActivity(startActivity, seenEventIds, nodesMap);
+        processCurrentActivity(startActivity, seenEventIds, nodesMap, eventId);
         relatedActivities.sort(Comparator.comparing(Activities::getEventTs));
         System.out.println(seenEventIds.contains(startActivity.getId()));
         for (Activities relatedActivity : relatedActivities) {
             System.out.println("target" + relatedActivity.getId());
             if (!seenEventIds.contains(relatedActivity.getId()) && !relatedActivity.getId().equals(startActivity.getId())) {
-                FileRelationNodes targetNode = createFileRelationNodes(relatedActivity);
+                FileRelationNodes targetNode = createFileRelationNodes(relatedActivity, eventId);
                 nodesMap.putIfAbsent(relatedActivity.getId(), targetNode);
 
                 System.out.println("source , target : "+ startActivity.getId()+ relatedActivity.getId());
@@ -248,7 +256,7 @@ public class FileVisualizeService {
 
                 // DFS 탐색 계속 진행 (depth 감소)
                 if (currentDepth > 0) {
-                    exploreFileRelationsDFS(relatedActivity, currentDepth - 1, seenEventIds, nodesMap, edges);
+                    exploreFileRelationsDFS(relatedActivity, currentDepth - 1, seenEventIds, nodesMap, edges, eventId);
                 }
 
                 // 다음 연결을 위해 startActivity를 현재 relatedActivity로 업데이트
@@ -265,19 +273,16 @@ public class FileVisualizeService {
         }
     }
 
-
-
     //활동을 처리하고 노드를 생성한 후, 해당 활동이 이미 처리되었음을 기록
-    private void processCurrentActivity(Activities activity, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap) {
+    private void processCurrentActivity(Activities activity, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap, long eventId) {
         seenEventIds.add(activity.getId());
-        FileRelationNodes node = createFileRelationNodes(activity);
+        FileRelationNodes node = createFileRelationNodes(activity, eventId);
         nodesMap.putIfAbsent(activity.getId(), node);
     }
 
-
     //Activities 객체를 기반으로 파일 관계 노드(FileRelationNodes) 객체를 생성
-    private FileRelationNodes createFileRelationNodes(Activities activity) {
-        double similarity = fileSimilarService.getFileSimilarity(activity.getId(), activity.getId());
+    private FileRelationNodes createFileRelationNodes(Activities activity, long eventId) {
+        double similarity = fileSimilarService.getFileSimilarity(activity.getId(), eventId);
         BigDecimal roundedSimilarity = new BigDecimal(similarity).setScale(2, RoundingMode.HALF_UP);
         return FileRelationNodes.builder()
                 .eventId(activity.getId())

@@ -82,23 +82,6 @@ public class FileSimilarService {
             return 404; // 해당 객체가 없음
         }
 
-        // 2. actId의 그룹에 cmpId가 속해있는지 확인
-        Optional<FileGroup> actGroupOpt = fileGroupRepo.findById(actId);
-        Optional<FileGroup> cmpGroupOpt = fileGroupRepo.findById(cmpId);
-
-        if (actGroupOpt.isEmpty() || cmpGroupOpt.isEmpty()) {
-            return 505; // 해당 객체의 그룹이 없음
-        }
-
-        // Optional에서 그룹 이름 추출
-        String actGroupName = actGroupOpt.map(FileGroup::getGroupName).orElse("Unknown");
-        String cmpGroupName = cmpGroupOpt.map(FileGroup::getGroupName).orElse("Unknown");
-
-        // 그룹 이름이 일치하지 않는 경우
-        if (!actGroupName.equals(cmpGroupName)) {
-            return 606; // 그룹 이름이 일치하지 않음
-        }
-
         // 3. 확장자 추출 및 유사도 계산
         String actExtension = FilenameUtils.getExtension(activity.get().getFileName()).toLowerCase();
         String cmpExtension = FilenameUtils.getExtension(cmpAct.get().getFileName()).toLowerCase();
