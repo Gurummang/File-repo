@@ -45,7 +45,7 @@ public class FileHistoryService {
 
 
     private FileHistoryDto convertToFileHistoryDto(Activities activity) {
-        LocalDateTime uploadTs = fileUploadRepo.findUploadTsByOrgSaaS_IdAndSaasFileId(activity.getUser().getOrgSaaS().getId(),activity.getSaasFileId());
+        LocalDateTime uploadTs = fileUploadRepo.findEarliestUploadTsByOrgSaaS_IdAndSaasFileId(activity.getUser().getOrgSaaS().getId(),activity.getSaasFileId());
         return FileHistoryDto.builder()
                 .eventId(activity.getId())
                 .saas(activity.getUser().getOrgSaaS().getSaas().getSaasName())
