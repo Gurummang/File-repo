@@ -10,6 +10,6 @@ import java.util.Optional;
 
 @Repository
 public interface TypeScanRepo extends JpaRepository<TypeScan, Long> {
-    @Query("SELECT ts FROM TypeScan ts JOIN ts.fileUpload fu WHERE fu.hash = :hash")
-    Optional<TypeScan> findByHash(@Param("hash") String hash);
+    @Query("SELECT ts FROM TypeScan ts JOIN ts.fileUpload fu WHERE fu.hash = :hash AND fu.id = :uploadId")
+    Optional<TypeScan> findByHash(@Param("hash") String hash, @Param("uploadId") long id);
 }

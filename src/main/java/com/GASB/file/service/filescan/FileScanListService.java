@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.modelmapper.ModelMapper;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -48,11 +49,11 @@ public class FileScanListService {
         }
     }
 
+    //.filter(dto -> dto != null)
     private List<FileListDto> fetchFileList(long orgId) {
         return fileUploadRepo.findAllByOrgId(orgId)
                 .stream()
                 .map(this::createFileListDto)
-                .filter(dto -> dto != null)
                 .collect(Collectors.toList());
     }
 
@@ -67,26 +68,25 @@ public class FileScanListService {
         StoredFile storedFile = optionalStoredFile.get();
         VtReport vtReport = storedFile.getVtReport();
         FileStatus fileStatus = storedFile.getFileStatus();
-        Activities activities = getActivities(fileUpload.getSaasFileId());
+        Activities activities = getActivities(fileUpload.getSaasFileId(), fileUpload.getTimestamp());
 
         return FileListDto.builder()
                 .id(fileUpload.getId())
-                .fileName(activities != null ? activities.getFileName() : "Unknown")
-                .saltedHash(fileUpload.getHash())
+                .name(activities != null ? activities.getFileName() : "Unknown")
                 .size(fileUpload.getStoredFile().getSize())
                 .type(fileUpload.getStoredFile().getType())
                 .saas(activities != null ? activities.getUser().getOrgSaaS().getSaas().getSaasName() : "Unknown")
                 .user(activities != null ? activities.getUser().getUserName() : "Unknown")
-                .uploadChannel(activities != null ? activities.getUploadChannel() : "Unknown")
-                .created_at(fileUpload.getTimestamp())
+                .path(activities != null ? activities.getUploadChannel() : "Unknown")
+                .date(fileUpload.getTimestamp())
                 .vtReport(convertToVtReportDto(vtReport))
                 .fileStatus(convertToFileStatusDto(fileStatus))
-                .GScan(createInnerScanDto(hash)) // Assuming GScan info should be included
+                .GScan(createInnerScanDto(fileUpload.getId(), hash)) // Assuming GScan info should be included
                 .build();
     }
 
-    private InnerScanDto createInnerScanDto(String hash) {
-        TypeScan typeScan = getTypeScan(hash);
+    private InnerScanDto createInnerScanDto(long id, String hash) {
+        TypeScan typeScan = getTypeScan(id, hash);
         MimeTypeDto mimeTypeDto = (typeScan != null) ? convertToMimeTypeDto(typeScan) : null;
 
         return InnerScanDto.builder()
@@ -99,13 +99,14 @@ public class FileScanListService {
         return fileUploadRepo.countVtMalwareByOrgId(orgId) + fileUploadRepo.countSuspiciousMalwareByOrgId(orgId);
     }
 
-    private TypeScan getTypeScan(String hash) {
-        return typeScanRepo.findByHash(hash).orElse(null);
+    private TypeScan getTypeScan(long id, String hash) {
+        return typeScanRepo.findByHash(hash, id).orElse(null);
     }
 
-    private Activities getActivities(String saasFileId) {
-        return activitiesRepo.getActivitiesBySaaSFileId(saasFileId);
+    private Activities getActivities(String saasFileId, LocalDateTime timestamp) {
+        return activitiesRepo.findAllBySaasFileIdAndTimeStamp(saasFileId, timestamp);
     }
+
 
     private MimeTypeDto convertToMimeTypeDto(TypeScan typeScan) {
         if (typeScan == null) {
@@ -117,11 +118,26 @@ public class FileScanListService {
 
     private VtReportDto convertToVtReportDto(VtReport vtReport) {
         if (vtReport == null) {
-            log.debug("VtReport is null, cannot convert to VtReportDto");
             return null;
         }
-        return modelMapper.map(vtReport, VtReportDto.class);
+
+        return VtReportDto.builder()
+                .type(vtReport.getType())
+                .sha256(vtReport.getStoredFile().getSaltedHash())  // StoredFile에서 sha256을 가져옴
+                .v3(vtReport.getV3())
+                .alyac(vtReport.getALYac())
+                .kaspersky(vtReport.getKaspersky())
+                .falcon(vtReport.getFalcon())
+                .avast(vtReport.getAvast())
+                .sentinelone(vtReport.getSentinelone())
+                .detectEngine(vtReport.getDetectEngine())
+                .completeEngine(vtReport.getCompleteEngine())
+                .score(vtReport.getScore())
+                .threatLabel(vtReport.getThreatLabel())
+                .reportUrl(vtReport.getReportUrl())
+                .build();
     }
+
 
     private FileStatusDto convertToFileStatusDto(FileStatus fileStatus) {
         if (fileStatus == null) {

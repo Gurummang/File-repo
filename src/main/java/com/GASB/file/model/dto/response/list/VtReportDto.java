@@ -12,6 +12,7 @@ import lombok.Setter;
 public class VtReportDto {
 
     private String type;
+    private String sha256;
     private String v3;
     private String alyac;
     private String kaspersky;
@@ -25,8 +26,9 @@ public class VtReportDto {
     private String reportUrl;
 
     @Builder
-    public VtReportDto(String type, String v3, String alyac, String kaspersky, String falcon, String avast, String sentinelone, int detectEngine, int completeEngine, int score, String threatLabel, String reportUrl) {
+    public VtReportDto(String type, String sha256, String v3, String alyac, String kaspersky, String falcon, String avast, String sentinelone, int detectEngine, int completeEngine, int score, String threatLabel, String reportUrl) {
         this.type = type;
+        this.sha256 = sha256;
         this.v3 = v3;
         this.alyac = alyac;
         this.kaspersky = kaspersky;

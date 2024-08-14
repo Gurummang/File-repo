@@ -13,30 +13,28 @@ import java.time.LocalDateTime;
 @Builder
 public class FileListDto {
     private long id;
-    private String fileName;
-    private String saltedHash;
+    private String name;
     private int size;
     private String type;
     private String saas;
     private String user;
-    private String uploadChannel;
-    private LocalDateTime created_at;
+    private String path;
+    private LocalDateTime date;
     private VtReportDto vtReport;
     private FileStatusDto fileStatus;
     private InnerScanDto GScan;
 
 
     @Builder
-    public FileListDto(long id, String fileName, String saltedHash, int size, String type, String saas, String user, String uploadChannel, LocalDateTime created_at, VtReportDto vtReport, FileStatusDto fileStatus, InnerScanDto GScan){
+    public FileListDto(long id, String fileName, int size, String type, String saas, String user, String uploadChannel, LocalDateTime created_at, VtReportDto vtReport, FileStatusDto fileStatus, InnerScanDto GScan){
         this.id = id;
-        this.fileName = fileName;
-        this.saltedHash = saltedHash;
+        this.name = fileName;
         this.size = size;
         this.type = type;
         this.saas = saas;
         this.user = user;
-        this.uploadChannel = uploadChannel;
-        this.created_at = created_at;
+        this.path = uploadChannel;
+        this.date = created_at;
         this.vtReport = vtReport;
         this.fileStatus = fileStatus;
         this.GScan = GScan;
