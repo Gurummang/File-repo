@@ -85,7 +85,7 @@ public class FileVisualizeTestService {
     //파일 히스토리 맵을 초기화하고, 노드와 엣지를 생성합니다.
     //DFS를 통해 파일 간의 관계를 탐색하고, 노드 및 엣지 정보를 갱신합니다.
     //필요한 정보를 필터링한 후 최종적으로 Slack과 Google Drive에 해당하는 파일 히스토리 및 엣지 데이터를 반환합니다.
-    public FileHistoryBySaaS getFileHistoryBySaaS(long eventId) {
+    public FileHistoryBySaaS getFileHistoryBySaaS(long eventId, long orgId) {
         //활동(Activity) 데이터를 가져오고 시작 활동을 기준으로 히스토리를 추적합니다.
         Activities activity = getActivity(eventId);
         Activities startActivity = activitiesRepo.getActivitiesBySaaSFileId(activity.getSaasFileId());
@@ -98,7 +98,7 @@ public class FileVisualizeTestService {
 
         //DFS를 통해 파일 간의 관계를 탐색하고, 노드 및 엣지 정보를 갱신합니다.
         exploreFileRelationsDFS(startActivity, 2, seenEventIds, nodesMap, edges, eventId);
-        addGroupRelatedActivities(eventId,seenEventIds,nodesMap);
+        addGroupRelatedActivities(eventId,seenEventIds,nodesMap, orgId);
 
         String saasName = getSaasName(startActivity);
         List<FileRelationNodes> nodesList = new ArrayList<>(nodesMap.values());
@@ -115,9 +115,8 @@ public class FileVisualizeTestService {
                 .build();
     }
 
-    private void addGroupRelatedActivities(long eventId, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap) {
+    private void addGroupRelatedActivities(long eventId, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap, long orgId) {
         String groupName = fileGroupRepo.findGroupNameById(eventId);
-        long orgId = activitiesRepo.findOrgIdByActivityId(eventId);
         List<Activities> sameGroups = activitiesRepo.findByOrgIdAndGroupName(orgId, groupName);
         for (Activities a : sameGroups) {
             if (!seenEventIds.contains(a.getId()) && !a.getId().equals(eventId)) {
@@ -251,7 +250,7 @@ public class FileVisualizeTestService {
         log.info("기준 노드: {}" ,startActivity.getId());
         processCurrentActivity(startActivity, seenEventIds, nodesMap, eventId);
         relatedActivities.sort(Comparator.comparing(Activities::getEventTs));
-        log.info("기준 노드가 이미 탐색된거냐? :{}", seenEventIds.contains(startActivity.getId()));
+        log.info("seenEventIds에 들어갔냐? :{}", seenEventIds.contains(startActivity.getId()));
         for (Activities relatedActivity : relatedActivities) {
             log.info("기준 노드에서 탐색할 노드: {}" , relatedActivity.getId());
             if (!seenEventIds.contains(relatedActivity.getId()) && !relatedActivity.getId().equals(startActivity.getId())) {
