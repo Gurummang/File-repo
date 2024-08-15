@@ -11,6 +11,7 @@ import com.GASB.file.service.filescan.FileScanListService;
 import com.GASB.file.service.history.FileHistoryService;
 import com.GASB.file.service.history.FileHistoryStatisticsService;
 import com.GASB.file.service.history.FileVisualizeService;
+import com.GASB.file.service.history.FileVisualizeTestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,15 +25,17 @@ public class FileController {
     private final FileHistoryService fileHistoryService;
     private final FileHistoryStatisticsService fileHistoryStatisticsService;
     private final FileVisualizeService fileVisualizeService;
+    private final FileVisualizeTestService fileVisualizeTestService;
     private final FileScanListService fileScanListService;
 
     @Autowired
     public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService, FileVisualizeService fileVisualizeService,
-                          FileScanListService fileScanListService){
+                          FileVisualizeTestService fileVisualizeTestService, FileScanListService fileScanListService){
         this.fileBoardReturnService = fileBoardReturnService;
         this.fileHistoryService = fileHistoryService;
         this.fileHistoryStatisticsService = fileHistoryStatisticsService;
         this.fileVisualizeService = fileVisualizeService;
+        this.fileVisualizeTestService = fileVisualizeTestService;
         this.fileScanListService = fileScanListService;
     }
     @GetMapping
@@ -64,7 +67,7 @@ public class FileController {
     @PostMapping("/history/visualize")
     public ResponseDto<FileHistoryBySaaS> fileHistoryVisualize(@RequestBody EventIdRequest eventIdRequest){
         long eventId = eventIdRequest.getEventId();
-        FileHistoryBySaaS fileHistoryBySaaS = fileVisualizeService.getFileHistoryBySaaS(eventId);
+        FileHistoryBySaaS fileHistoryBySaaS = fileVisualizeTestService.getFileHistoryBySaaS(eventId);
         return ResponseDto.ofSuccess(fileHistoryBySaaS);
     }
 

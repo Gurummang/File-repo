@@ -12,13 +12,15 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 public class FileHistoryBySaaS {
+    private long originNode;
     private List<FileRelationNodes> slack;
     private List<FileRelationNodes> googleDrive;
     private List<FileRelationEdges> edges;
 
-    public FileHistoryBySaaS(List<FileRelationNodes> slack, List<FileRelationNodes> googleDrive, List<FileRelationEdges> edges){
-        this.slack = slack;
-        this.googleDrive =googleDrive;
-        this.edges = edges;
+    public FileHistoryBySaaS(long originNode, List<FileRelationNodes> slack, List<FileRelationNodes> googleDrive, List<FileRelationEdges> edges){
+        this.originNode = originNode;
+        this.slack = List.copyOf(slack);
+        this.googleDrive = List.copyOf(googleDrive);
+        this.edges = List.copyOf(edges);
     }
 }
