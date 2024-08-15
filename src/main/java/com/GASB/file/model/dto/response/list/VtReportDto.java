@@ -1,13 +1,11 @@
 package com.GASB.file.model.dto.response.list;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class VtReportDto {
 
@@ -24,21 +22,4 @@ public class VtReportDto {
     private int score;
     private String threatLabel;
     private String reportUrl;
-
-    @Builder
-    public VtReportDto(String type, String sha256, String v3, String alyac, String kaspersky, String falcon, String avast, String sentinelone, int detectEngine, int completeEngine, int score, String threatLabel, String reportUrl) {
-        this.type = type;
-        this.sha256 = sha256;
-        this.v3 = v3;
-        this.alyac = alyac;
-        this.kaspersky = kaspersky;
-        this.falcon = falcon;
-        this.avast = avast;
-        this.sentinelone = sentinelone;
-        this.detectEngine = detectEngine;
-        this.completeEngine = completeEngine;
-        this.score = score;
-        this.threatLabel = threatLabel;
-        this.reportUrl = reportUrl;
-    }
 }

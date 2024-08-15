@@ -20,12 +20,12 @@ public class FileDashboardDto {
     private List<StatisticsDto> statistics;
 
     @Builder
-    public FileDashboardDto(long total_count, long total_volume, int total_dlp, int total_malware, List<TotalTypeDto> total_type, List<StatisticsDto> statistics){
-        this.totalCount = total_count;
-        this.totalVolume = total_volume;
-        this.totalDlp = total_dlp;
-        this.totalMalware = total_malware;
-        this.totalType = total_type;
+    public FileDashboardDto(long totalCount, long totalVolume, int totalDlp, int totalMalware, List<TotalTypeDto> totalType, List<StatisticsDto> statistics){
+        this.totalCount = totalCount;
+        this.totalVolume = totalVolume;
+        this.totalDlp = totalDlp;
+        this.totalMalware = totalMalware;
+        this.totalType = totalType;
         this.statistics = statistics;
     }
 }

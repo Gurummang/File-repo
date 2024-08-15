@@ -1,15 +1,13 @@
 package com.GASB.file.model.dto.response.list;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class FileListDto {
     private long id;
@@ -23,20 +21,4 @@ public class FileListDto {
     private VtReportDto vtReport;
     private FileStatusDto fileStatus;
     private InnerScanDto GScan;
-
-
-    @Builder
-    public FileListDto(long id, String fileName, int size, String type, String saas, String user, String uploadChannel, LocalDateTime created_at, VtReportDto vtReport, FileStatusDto fileStatus, InnerScanDto GScan){
-        this.id = id;
-        this.name = fileName;
-        this.size = size;
-        this.type = type;
-        this.saas = saas;
-        this.user = user;
-        this.path = uploadChannel;
-        this.date = created_at;
-        this.vtReport = vtReport;
-        this.fileStatus = fileStatus;
-        this.GScan = GScan;
-    }
 }

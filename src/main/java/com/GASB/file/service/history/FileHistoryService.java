@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class FileHistoryService {
@@ -31,7 +30,7 @@ public class FileHistoryService {
         List<FileHistoryDto> sortedHistoryList = activitiesList.stream()
                 .map(this::convertToFileHistoryDto)
                 .sorted(Comparator.comparing(FileHistoryDto::getEventTs))
-                .collect(Collectors.toList());
+                .toList();
 
         int totalEvent = sortedHistoryList.size();
 

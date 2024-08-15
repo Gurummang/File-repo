@@ -37,7 +37,7 @@ public class SlackFileController {
             SlackTotalFileDataDto totalFilesData = slackFileService.slackTotalFilesData();
             if (totalFilesData.getFiles().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(SlackTotalFileDataDto.builder()
-                        .Status("No Data")
+                        .status("No Data")
                         .files(Collections.singletonList(SlackTotalFileDataDto.FileDetail.builder()
                                 .fileName("No Data")
                                 .username("No Data")
@@ -50,7 +50,7 @@ public class SlackFileController {
         } catch (Exception e) {
             logger.error("Error fetching total files data", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(SlackTotalFileDataDto.builder()
-                    .Status("Error")
+                    .status("Error")
                     .files(Collections.singletonList(SlackTotalFileDataDto.FileDetail.builder()
                             .fileName("Error")
                             .username("Server Error")

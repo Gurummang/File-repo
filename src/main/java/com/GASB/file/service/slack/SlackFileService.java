@@ -80,12 +80,12 @@ public class SlackFileService {
                             .hash(fileUpload.getHash())
                             .detectEngine(vtReport.getDetectEngine())
                             .score(vtReport.getScore())
-                            .V3(vtReport.getV3())
-                            .ALYac(vtReport.getALYac())
-                            .Kaspersky(vtReport.getKaspersky())
-                            .Falcon(vtReport.getFalcon())
-                            .Avast(vtReport.getAvast())
-                            .Sentinelone(vtReport.getSentinelone())
+                            .v3(vtReport.getV3())
+                            .alyac(vtReport.getAlyac())
+                            .kaspersky(vtReport.getKaspersky())
+                            .falcon(vtReport.getFalcon())
+                            .avast(vtReport.getAvast())
+                            .sentinelone(vtReport.getSentinelone())
                             .reportUrl(vtReport.getReportUrl())
                             .build();
                     detailBuilder.vtScanResult(vtScanResult);
@@ -106,7 +106,7 @@ public class SlackFileService {
             }
 
             return detailBuilder.build();
-        }).collect(Collectors.toList());
+        }).toList();
 
         SlackTotalFileDataDto totalFileDataDto = new SlackTotalFileDataDto();
         totalFileDataDto.setStatus("success");

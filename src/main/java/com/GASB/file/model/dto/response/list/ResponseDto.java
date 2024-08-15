@@ -12,43 +12,47 @@ import java.util.List;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ResponseDto<T> {
+
+    private static final String SUCCESS_STATUS = "success";
+    private static final String ERROR_STATUS = "error";
+
     private String status;
-    private Long file_id;
+    private Long fileId;
     private String message;
     private T data;
 
     public static <T> ResponseDto<T> ofSuccess() {
         return ResponseDto.<T>builder()
-                .status("success")
+                .status(SUCCESS_STATUS)
                 .build();
     }
 
-    public static <T> ResponseDto<T> ofSuccess(Long file_id, T data) {
+    public static <T> ResponseDto<T> ofSuccess(Long fileId, T data) {
         return ResponseDto.<T>builder()
-                .status("success")
-                .file_id(file_id)
+                .status(SUCCESS_STATUS)
+                .fileId(fileId)
                 .data(data)
                 .build();
     }
 
     public static <T> ResponseDto<T> ofSuccess(T data) {
         return ResponseDto.<T>builder()
-                .status("success")
+                .status(SUCCESS_STATUS)
                 .data(data)
                 .build();
     }
 
     public static <T> ResponseDto<T> ofFail(String message) {
         return ResponseDto.<T>builder()
-                .status("error")
+                .status(ERROR_STATUS)
                 .message(message)
                 .build();
     }
 
-    public static <T> ResponseDto<T> ofFail(Long file_id, String message) {
+    public static <T> ResponseDto<T> ofFail(Long fileId, String message) {
         return ResponseDto.<T>builder()
-                .status("error")
-                .file_id(file_id)
+                .status(ERROR_STATUS)
+                .fileId(fileId)
                 .message(message)
                 .build();
     }

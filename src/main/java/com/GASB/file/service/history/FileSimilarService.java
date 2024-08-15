@@ -14,12 +14,10 @@ import java.util.Optional;
 public class FileSimilarService {
 
     private final ActivitiesRepo activitiesRepo;
-    private final FileGroupRepo fileGroupRepo;
 
     @Autowired
-    public FileSimilarService(ActivitiesRepo activitiesRepo, FileGroupRepo fileGroupRepo) {
+    public FileSimilarService(ActivitiesRepo activitiesRepo) {
         this.activitiesRepo = activitiesRepo;
-        this.fileGroupRepo = fileGroupRepo;
     }
 
     // 유사도 측정
@@ -82,17 +80,17 @@ public class FileSimilarService {
             return 404; // 해당 객체가 없음
         }
 
-        // 3. 확장자 추출 및 유사도 계산
+        // 2. 확장자 추출 및 유사도 계산
         String actExtension = FilenameUtils.getExtension(activity.get().getFileName()).toLowerCase();
         String cmpExtension = FilenameUtils.getExtension(cmpAct.get().getFileName()).toLowerCase();
         double typeSimilarity = typeSim(actExtension, cmpExtension);
 
-        // 4. 파일 이름 유사도 계산
+        // 3. 파일 이름 유사도 계산
         String actFileName = noExtension(activity.get().getFileName());
         String cmpFileName = noExtension(cmpAct.get().getFileName());
         double nameSimilarity = calculateSim(actFileName, cmpFileName);
 
-        // 5. 총 유사도 계산 (이름 유사도 60% + 확장자 유사도 40%)
+        // 4. 총 유사도 계산 (이름 유사도 60% + 확장자 유사도 40%)
         return (nameSimilarity * 0.6) + (typeSimilarity * 0.4);
     }
 }

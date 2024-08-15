@@ -25,22 +25,22 @@ public class VtReport {
     private String type;
 
     @Column(name = "v3")
-    private String V3;
+    private String v3;
 
     @Column(name = "alyac")
-    private String ALYac;
+    private String alyac;
 
     @Column(name = "kaspersky")
-    private String Kaspersky;
+    private String kaspersky;
 
     @Column(name = "falcon")
-    private String Falcon;
+    private String falcon;
 
     @Column(name = "avast")
-    private String Avast;
+    private String avast;
 
     @Column(name = "sentinelone")
-    private String Sentinelone;
+    private String sentinelone;
 
     @Column(name = "detect_engine")
     private int detectEngine;

@@ -15,7 +15,7 @@ public class InnerScanDto {
     private String step2;
 
     @Builder
-    public InnerScanDto(MimeTypeDto step1, String step2Detail){
+    public InnerScanDto(MimeTypeDto step1, String step2){
         this.step1 = step1;
         this.step2 = step2;
     }
