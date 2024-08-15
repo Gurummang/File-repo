@@ -7,8 +7,6 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-//import static org.hibernate.internal.CoreLogging.logger;
-
 @Service
 public class RabbitMQListener {
 

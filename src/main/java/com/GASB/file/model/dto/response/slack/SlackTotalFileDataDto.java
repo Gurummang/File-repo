@@ -13,7 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 public class SlackTotalFileDataDto {
 
-    private String Status;
+    private String status;
     private List<FileDetail> files;
 
     @Data
@@ -63,17 +63,17 @@ public class SlackTotalFileDataDto {
             private int score = 60;
 
             @Builder.Default
-            private String V3 = "Trojan";
+            private String v3 = "Trojan";
             @Builder.Default
-            private String ALYac = "Trojan";
+            private String alyac = "Trojan";
             @Builder.Default
-            private String Kaspersky = "Trojan";
+            private String kaspersky = "Trojan";
             @Builder.Default
-            private String Falcon = "Trojan";
+            private String falcon = "Trojan";
             @Builder.Default
-            private String Avast = "Trojan";
+            private String avast = "Trojan";
             @Builder.Default
-            private String Sentinelone = "Trojan";
+            private String sentinelone = "Trojan";
             @Builder.Default
             private String reportUrl = "https://www.virustotal.com/gui/file/03c7c0ace395d80182db07ae2c30f034/detection";
         }

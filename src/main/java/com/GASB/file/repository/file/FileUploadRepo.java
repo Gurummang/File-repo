@@ -2,17 +2,13 @@ package com.GASB.file.repository.file;
 
 import com.GASB.file.model.dto.response.dashboard.TotalTypeDto;
 import com.GASB.file.model.entity.FileUpload;
-import com.GASB.file.model.entity.OrgSaaS;
-import com.GASB.file.model.entity.SaaS;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {

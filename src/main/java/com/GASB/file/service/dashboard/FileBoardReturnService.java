@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class FileBoardReturnService {
@@ -28,15 +27,15 @@ public class FileBoardReturnService {
         this.fileUploadRepo = fileUploadRepo;
     }
 
-    public FileDashboardDto boardListReturn(long org_id){
+    public FileDashboardDto boardListReturn(long orgId){
 
-        long totalCount = totalFilesCount(org_id);
-        long totalVolume = totalFileSizeCount(org_id);
-        int totalDlp = totalDlpCount(org_id);
-        int totalMalware = totalMalwareCount(org_id);
+        long totalCount = totalFilesCount(orgId);
+        long totalVolume = totalFileSizeCount(orgId);
+        int totalDlp = totalDlpCount(orgId);
+        int totalMalware = totalMalwareCount(orgId);
 
-        List<TotalTypeDto> totalType = getFileTypeDistribution(org_id);
-        List<StatisticsDto> statistics = getFileStatisticsMonth(org_id);
+        List<TotalTypeDto> totalType = getFileTypeDistribution(orgId);
+        List<StatisticsDto> statistics = getFileStatisticsMonth(orgId);
 
         // FileDashboardDto 객체를 생성하고 반환
         return FileDashboardDto.builder()
@@ -49,23 +48,20 @@ public class FileBoardReturnService {
                 .build();
     }
 
-    private long totalFilesCount(long org_id){
-        return fileUploadRepo.countFileByOrgId(org_id);
+    private long totalFilesCount(long orgId){
+        return fileUploadRepo.countFileByOrgId(orgId);
     }
 
-    private long totalFileSizeCount(long org_id){
-        return fileUploadRepo.getTotalSizeByOrgId(org_id);
-//        double totalSizeInBytes = fileUploadRepo.getTotalSizeByOrgId(org_id);
-//        double totalSizeInGB = totalSizeInBytes / 1_073_741_824.0;
-//        return Math.round(totalSizeInGB * 1000) / 1000.0;
+    private long totalFileSizeCount(long orgId){
+        return fileUploadRepo.getTotalSizeByOrgId(orgId);
     }
 
-    private int totalDlpCount(long org_id){
-        return fileUploadRepo.countDlpIssuesByOrgId(org_id);
+    private int totalDlpCount(long orgId){
+        return fileUploadRepo.countDlpIssuesByOrgId(orgId);
     }
 
-    private int totalMalwareCount(long org_id){
-        return fileUploadRepo.countVtMalwareByOrgId(org_id) + fileUploadRepo.countSuspiciousMalwareByOrgId(org_id);
+    private int totalMalwareCount(long orgId){
+        return fileUploadRepo.countVtMalwareByOrgId(orgId) + fileUploadRepo.countSuspiciousMalwareByOrgId(orgId);
     }
 
     private List<TotalTypeDto> getFileTypeDistribution(long orgId) {
@@ -104,7 +100,7 @@ public class FileBoardReturnService {
         }
 
         // 모든 날짜를 포함하도록 날짜 범위와 매핑된 데이터를 결합
-        List<StatisticsDto> resultStatistics = allDates.stream()
+        return allDates.stream()
                 .map(date -> {
                     StatisticsDto dto = statisticsMap.getOrDefault(date, new StatisticsDto(
                             date.format(dateFormatter),
@@ -113,9 +109,7 @@ public class FileBoardReturnService {
                     ));
                     return dto;
                 })
-                .collect(Collectors.toList());
-
-        return resultStatistics;
+                .toList();
     }
 
 

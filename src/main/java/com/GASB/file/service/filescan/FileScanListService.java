@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
+
 
 @Service
 @Slf4j
@@ -26,6 +26,7 @@ public class FileScanListService {
     private final TypeScanRepo typeScanRepo;
     private final ActivitiesRepo activitiesRepo;
     private final ModelMapper modelMapper;
+    private static final String UNKNOWN = "Unknown";
 
     @Autowired
     public FileScanListService(ModelMapper modelMapper, StoredFileRepo storedFileRepo, TypeScanRepo typeScanRepo, FileUploadRepo fileUploadRepo, ActivitiesRepo activitiesRepo){
@@ -54,7 +55,7 @@ public class FileScanListService {
         return fileUploadRepo.findAllByOrgId(orgId)
                 .stream()
                 .map(this::createFileListDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private FileListDto createFileListDto(FileUpload fileUpload) {
@@ -72,12 +73,12 @@ public class FileScanListService {
 
         return FileListDto.builder()
                 .id(fileUpload.getId())
-                .name(activities != null ? activities.getFileName() : "Unknown")
+                .name(activities != null ? activities.getFileName() : UNKNOWN)
                 .size(fileUpload.getStoredFile().getSize())
                 .type(fileUpload.getStoredFile().getType())
-                .saas(activities != null ? activities.getUser().getOrgSaaS().getSaas().getSaasName() : "Unknown")
-                .user(activities != null ? activities.getUser().getUserName() : "Unknown")
-                .path(activities != null ? activities.getUploadChannel() : "Unknown")
+                .saas(activities != null ? activities.getUser().getOrgSaaS().getSaas().getSaasName() : UNKNOWN)
+                .user(activities != null ? activities.getUser().getUserName() : UNKNOWN)
+                .path(activities != null ? activities.getUploadChannel() : UNKNOWN)
                 .date(fileUpload.getTimestamp())
                 .vtReport(convertToVtReportDto(vtReport))
                 .fileStatus(convertToFileStatusDto(fileStatus))
@@ -125,7 +126,7 @@ public class FileScanListService {
                 .type(vtReport.getType())
                 .sha256(vtReport.getStoredFile().getSaltedHash())  // StoredFile에서 sha256을 가져옴
                 .v3(vtReport.getV3())
-                .alyac(vtReport.getALYac())
+                .alyac(vtReport.getAlyac())
                 .kaspersky(vtReport.getKaspersky())
                 .falcon(vtReport.getFalcon())
                 .avast(vtReport.getAvast())

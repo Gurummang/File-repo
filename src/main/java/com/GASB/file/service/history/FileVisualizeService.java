@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -21,6 +20,9 @@ public class FileVisualizeService {
     private final FileUploadRepo fileUploadRepo;
     private final FileGroupRepo fileGroupRepo;
     private final FileSimilarService fileSimilarService;
+    private static final String FILE_UPLOAD = "file_uploaded";
+    private static final String SLACK = "slack";
+    private static final String GOOGLE_DRIVE = "googleDrive";
 
     public FileVisualizeService(ActivitiesRepo activitiesRepo, FileUploadRepo fileUploadRepo, FileGroupRepo fileGroupRepo, FileSimilarService fileSimilarService) {
         this.activitiesRepo = activitiesRepo;
@@ -61,7 +63,7 @@ public class FileVisualizeService {
                     String label = edgeLabelsMap.get(edgeKey).iterator().next();
                     return new FileRelationEdges(Long.parseLong(parts[0]), Long.parseLong(parts[1]), label);
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     // 특정 엣지가 전이적인지 확인
@@ -105,8 +107,8 @@ public class FileVisualizeService {
         List<FileRelationEdges> filteredEdges = filterTransitiveEdges(edges);
 
         return FileHistoryBySaaS.builder()
-                .slack(fileHistoryMap.get("slack"))
-                .googleDrive(fileHistoryMap.get("googleDrive"))
+                .slack(fileHistoryMap.get(SLACK))
+                .googleDrive(fileHistoryMap.get(GOOGLE_DRIVE))
                 .edges(filteredEdges)
                 .build();
     }
@@ -131,8 +133,8 @@ public class FileVisualizeService {
     //파일 히스토리를 저장할 맵을 초기화
     private Map<String, List<FileRelationNodes>> initializeFileHistoryMap() {
         Map<String, List<FileRelationNodes>> fileHistoryMap = new HashMap<>();
-        fileHistoryMap.put("slack", new ArrayList<>());
-        fileHistoryMap.put("googleDrive", new ArrayList<>());
+        fileHistoryMap.put(SLACK, new ArrayList<>());
+        fileHistoryMap.put(GOOGLE_DRIVE, new ArrayList<>());
         return fileHistoryMap;
     }
 
@@ -146,10 +148,10 @@ public class FileVisualizeService {
         nodesList.sort(Comparator.comparing(FileRelationNodes::getEventTs));
 
         // saasName에 따라 파일 히스토리 맵에 정렬된 노드 리스트를 추가
-        if ("slack".equals(saasName)) {
-            fileHistoryMap.get("slack").addAll(nodesList);
-        } else if ("googledrive".equals(saasName)) {
-            fileHistoryMap.get("googleDrive").addAll(nodesList);
+        if (SLACK.equals(saasName)) {
+            fileHistoryMap.get(SLACK).addAll(nodesList);
+        } else if (GOOGLE_DRIVE.equals(saasName)) {
+            fileHistoryMap.get(GOOGLE_DRIVE).addAll(nodesList);
         }
     }
 
@@ -160,13 +162,12 @@ public class FileVisualizeService {
         if (maxDepth < 0) return;
 
         // 현재 활동 처리
-        System.out.println("startActivity:");
-        System.out.println(startActivity.getId());
+        log.info("startActivity: {}", startActivity.getId());
 
         // 초기 활동 결정
         Activities initialActivity = determineInitialActivity(startActivity, seenEventIds);
-        System.out.println("initialActivity:");
-        System.out.println(initialActivity.getId());
+        log.info("initialActivity: {}", initialActivity.getId());
+
 
         // SaaSFileID와 Hash로 일치하는 활동 목록 가져오기
         List<Activities> sameSaasFiles = findAndSortActivitiesBySaasFileId(initialActivity);
@@ -191,7 +192,7 @@ public class FileVisualizeService {
 
     private Activities determineInitialActivity(Activities startActivity, Set<Long> seenEventIds) {
         Activities testActivity = activitiesRepo.getActivitiesBySaaSFileId(startActivity.getSaasFileId());
-        if (!startActivity.getEventType().equals("file_uploaded") && !seenEventIds.contains(testActivity.getId())) {
+        if (!startActivity.getEventType().equals(FILE_UPLOAD) && !seenEventIds.contains(testActivity.getId())) {
             return testActivity;
         } else {
             return startActivity;
@@ -203,15 +204,15 @@ public class FileVisualizeService {
                 .stream()
                 .filter(a -> !a.getId().equals(activity.getId()))  // 초기 활동의 ID가 아닌 활동만 필터링
                 .sorted(Comparator.comparing(Activities::getEventTs))  // 시간 순서로 정렬
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private List<Activities> findAndSortActivitiesByHash(Activities activity) {
         return activitiesRepo.findByHash(getSaltedHash(activity))
                 .stream()
-                .filter(a -> "file_uploaded".equals(a.getEventType()))  // 'file_uploaded' 타입만 필터링
+                .filter(a -> FILE_UPLOAD.equals(a.getEventType()))  // 'file_uploaded' 타입만 필터링
                 .sorted(Comparator.comparing(Activities::getEventTs))  // 시간 순서로 정렬
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private void removeDuplicateActivities(List<Activities> sameHashFiles, List<Activities> sameSaasFiles) {
@@ -221,8 +222,7 @@ public class FileVisualizeService {
     private Activities determineNewInitialActivity(Activities startActivity, Activities initialActivity, List<Activities> sameSaasFiles, List<Activities> sameHashFiles, Set<Long> seenEventIds) {
         if (sameSaasFiles.isEmpty() && !sameHashFiles.isEmpty() && !sameHashFiles.get(0).getId().equals(startActivity.getId()) && !seenEventIds.contains(sameHashFiles.get(0).getId())) {
             Activities newInitialActivity = sameHashFiles.get(0);
-            System.out.println("New initialActivity:");
-            System.out.println(newInitialActivity.getId());
+            log.info("New initialActivity: {}", newInitialActivity.getId());
             return newInitialActivity;
         }
         return initialActivity;
@@ -240,17 +240,17 @@ public class FileVisualizeService {
     //재귀적으로 DFS 탐색을 진행하여 연결 관계를 계속해서 추적합니다.
     private void addRelatedActivities(List<Activities> relatedActivities, Activities startActivity, Set<Long> seenEventIds, Map<Long, FileRelationNodes> nodesMap, List<FileRelationEdges> edges, String edgeType, int currentDepth, long eventId) {
         // 활동 리스트를 이벤트 발생 시간 기준으로 정렬 (오름차순)
-        System.out.println("startACtivity:" + startActivity.getId());
+        log.info("startACtivity: {}" ,startActivity.getId());
         processCurrentActivity(startActivity, seenEventIds, nodesMap, eventId);
         relatedActivities.sort(Comparator.comparing(Activities::getEventTs));
-        System.out.println(seenEventIds.contains(startActivity.getId()));
+        log.info("{}", seenEventIds.contains(startActivity.getId()));
         for (Activities relatedActivity : relatedActivities) {
-            System.out.println("target" + relatedActivity.getId());
+            log.info("target: {}" , relatedActivity.getId());
             if (!seenEventIds.contains(relatedActivity.getId()) && !relatedActivity.getId().equals(startActivity.getId())) {
                 FileRelationNodes targetNode = createFileRelationNodes(relatedActivity, eventId);
                 nodesMap.putIfAbsent(relatedActivity.getId(), targetNode);
 
-                System.out.println("source , target : "+ startActivity.getId()+ relatedActivity.getId());
+                log.info("source , target : {}, {}",startActivity.getId(),relatedActivity.getId());
                 // 엣지 추가 (startActivity와 시간 순으로 연결된 relatedActivity)
                 edges.add(new FileRelationEdges(startActivity.getId(), relatedActivity.getId(), edgeType));
 
@@ -260,15 +260,12 @@ public class FileVisualizeService {
                 }
 
                 // 다음 연결을 위해 startActivity를 현재 relatedActivity로 업데이트
-                if(relatedActivity.getEventType().equals("file_uploaded")) {
+                if(relatedActivity.getEventType().equals(FILE_UPLOAD)) {
                     startActivity = relatedActivity;
-                    System.out.println("relatedActivity:");
-                    System.out.println(startActivity.getId());
                 } else{
                     startActivity = activitiesRepo.getActivitiesBySaaSFileId(relatedActivity.getSaasFileId());
-                    System.out.println("relatedActivity:");
-                    System.out.println(startActivity.getId());
                 }
+                log.info("relatedActivity:{}", startActivity.getId());
             }
         }
     }
@@ -283,7 +280,7 @@ public class FileVisualizeService {
     //Activities 객체를 기반으로 파일 관계 노드(FileRelationNodes) 객체를 생성
     private FileRelationNodes createFileRelationNodes(Activities activity, long eventId) {
         double similarity = fileSimilarService.getFileSimilarity(activity.getId(), eventId);
-        BigDecimal roundedSimilarity = new BigDecimal(similarity).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal roundedSimilarity = BigDecimal.valueOf(similarity).setScale(2, RoundingMode.HALF_UP);
         return FileRelationNodes.builder()
                 .eventId(activity.getId())
                 .saas(activity.getUser().getOrgSaaS().getSaas().getSaasName())

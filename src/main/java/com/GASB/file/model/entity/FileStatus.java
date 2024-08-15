@@ -19,12 +19,12 @@ public class FileStatus {
 
     @Builder.Default
     @Column(name = "gscan_status")
-    private int GscanStatus = -1;
+    private int gscanStatus = -1;
     @Builder.Default
     @Column(name = "dlp_status")
-    private int DlpStatus = -1;
+    private int dlpStatus = -1;
     @Builder.Default
     @Column(name = "vt_status")
-    private int VtStatus = -1;
+    private int vtStatus = -1;
 
 }

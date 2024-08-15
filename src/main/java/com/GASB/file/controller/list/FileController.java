@@ -1,6 +1,5 @@
 package com.GASB.file.controller.list;
 
-import com.GASB.file.config.rabbitmq.RabbitMQProperties;
 import com.GASB.file.model.dto.request.EventIdRequest;
 import com.GASB.file.model.dto.request.OrgIdRequest;
 import com.GASB.file.model.dto.response.dashboard.FileDashboardDto;
@@ -26,17 +25,15 @@ public class FileController {
     private final FileHistoryStatisticsService fileHistoryStatisticsService;
     private final FileVisualizeService fileVisualizeService;
     private final FileScanListService fileScanListService;
-    private final RabbitMQProperties properties;
 
     @Autowired
     public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService, FileVisualizeService fileVisualizeService,
-                          FileScanListService fileScanListService, RabbitMQProperties properties){
+                          FileScanListService fileScanListService){
         this.fileBoardReturnService = fileBoardReturnService;
         this.fileHistoryService = fileHistoryService;
         this.fileHistoryStatisticsService = fileHistoryStatisticsService;
         this.fileVisualizeService = fileVisualizeService;
         this.fileScanListService = fileScanListService;
-        this.properties = properties;
     }
     @GetMapping
     public String hello(){
@@ -54,7 +51,6 @@ public class FileController {
     public ResponseDto<List<FileHistoryListDto>> fileHistoryList(@RequestBody OrgIdRequest orgIdRequest){
         long orgId = orgIdRequest.getOrgId();
         List<FileHistoryListDto> fileHistory = fileHistoryService.historyListReturn(orgId);
-        // rabbitTemplate.convertAndSend(properties.getGroupingRoutingKey(),orgId);
         return ResponseDto.ofSuccess(fileHistory);
     }
 

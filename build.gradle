@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.3.1'
 	id 'io.spring.dependency-management' version '1.1.5'
+	id "com.github.spotbugs" version "6.0.19"
 }
 
 group = 'com.GASB'
@@ -45,6 +46,22 @@ dependencies {
 	implementation 'org.apache.commons:commons-text:1.10.0' // Use the latest version available
 	implementation 'commons-io:commons-io:2.11.0' 			// 확장자 분리용
 
+	// spotbugs
+	spotbugsPlugins 'com.h3xstream.findsecbugs:findsecbugs-plugin:1.12.0'
+}
+
+spotbugs {
+	toolVersion = '4.8.6'
+	ignoreFailures = true
+}
+tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
+	reports {
+		xml.required.set(false)
+		html.required.set(true)
+		html.outputLocation.set(layout.buildDirectory.file("reports/spotbugs/main.html"))
+		html.stylesheet = 'fancy-hist.xsl'
+	}
+	jvmArgs = ['--add-opens', 'java.base/java.lang=ALL-UNNAMED']
 }
 
 tasks.named('test') {

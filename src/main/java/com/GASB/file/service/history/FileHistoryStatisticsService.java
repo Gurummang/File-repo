@@ -93,7 +93,7 @@ public class FileHistoryStatisticsService {
                         .modifyCount(0)
                         .movedCount(0)
                         .build()))
-                .collect(Collectors.toList());
+                .toList();
     }
 
 

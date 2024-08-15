@@ -1,6 +1,5 @@
 package com.GASB.file.model.dto.response.dashboard;
 
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
