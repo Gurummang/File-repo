@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -204,7 +205,7 @@ public class FileVisualizeService {
                 .stream()
                 .filter(a -> !a.getId().equals(activity.getId()))  // 초기 활동의 ID가 아닌 활동만 필터링
                 .sorted(Comparator.comparing(Activities::getEventTs))  // 시간 순서로 정렬
-                .toList();
+                .collect(Collectors.toList());
     }
 
     private List<Activities> findAndSortActivitiesByHash(Activities activity) {
@@ -212,7 +213,7 @@ public class FileVisualizeService {
                 .stream()
                 .filter(a -> FILE_UPLOAD.equals(a.getEventType()))  // 'file_uploaded' 타입만 필터링
                 .sorted(Comparator.comparing(Activities::getEventTs))  // 시간 순서로 정렬
-                .toList();
+                .collect(Collectors.toList());
     }
 
     private void removeDuplicateActivities(List<Activities> sameHashFiles, List<Activities> sameSaasFiles) {
