@@ -14,6 +14,7 @@ import org.modelmapper.ModelMapper;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 
@@ -50,27 +51,37 @@ public class FileScanListService {
         }
     }
 
-    //.filter(dto -> dto != null)
     private List<FileListDto> fetchFileList(long orgId) {
         return fileUploadRepo.findAllByOrgId(orgId)
                 .stream()
-                .map(this::createFileListDto)
+                .map(fileUpload -> {
+                    FileListDto dto = createFileListDto(fileUpload);
+                    if (dto == null) {
+                        log.debug("FileListDto is null for fileUpload with id: {}", fileUpload.getId());
+                    }
+                    return dto;
+                })
+                .filter(Objects::nonNull)
                 .toList();
     }
 
+
     private FileListDto createFileListDto(FileUpload fileUpload) {
         String hash = fileUpload.getHash();
-        Optional<StoredFile> optionalStoredFile = storedFileRepo.findBySaltedHash(hash);
 
+        Optional<StoredFile> optionalStoredFile = storedFileRepo.findBySaltedHash(hash);
         if (optionalStoredFile.isEmpty()) {
+            log.debug("No StoredFile found for hash: {}", hash);
             return null;
         }
-
         StoredFile storedFile = optionalStoredFile.get();
         VtReport vtReport = storedFile.getVtReport();
         FileStatus fileStatus = storedFile.getFileStatus();
-        Activities activities = getActivities(fileUpload.getSaasFileId(), fileUpload.getTimestamp());
 
+        Activities activities = getActivities(fileUpload.getSaasFileId(), fileUpload.getTimestamp());
+        if (activities == null) {
+            log.debug("No Activities found for fileUpload id: {}", fileUpload.getId());
+        }
         return FileListDto.builder()
                 .id(fileUpload.getId())
                 .name(activities != null ? activities.getFileName() : UNKNOWN)
@@ -79,7 +90,7 @@ public class FileScanListService {
                 .saas(activities != null ? activities.getUser().getOrgSaaS().getSaas().getSaasName() : UNKNOWN)
                 .user(activities != null ? activities.getUser().getUserName() : UNKNOWN)
                 .path(activities != null ? activities.getUploadChannel() : UNKNOWN)
-                .date(fileUpload.getTimestamp())
+                .date(activities != null ? activities.getEventTs() : null)
                 .vtReport(convertToVtReportDto(vtReport))
                 .fileStatus(convertToFileStatusDto(fileStatus))
                 .GScan(createInnerScanDto(fileUpload.getId(), hash)) // Assuming GScan info should be included
@@ -105,8 +116,13 @@ public class FileScanListService {
     }
 
     private Activities getActivities(String saasFileId, LocalDateTime timestamp) {
-        return activitiesRepo.findAllBySaasFileIdAndTimeStamp(saasFileId, timestamp);
+        Activities activities = activitiesRepo.findAllBySaasFileIdAndTimeStamp(saasFileId, timestamp);
+        if (activities == null) {
+            log.info("No activities found for saasFileId: {} and timestamp: {}", saasFileId, timestamp);
+        }
+        return activities;
     }
+
 
 
     private MimeTypeDto convertToMimeTypeDto(TypeScan typeScan) {
