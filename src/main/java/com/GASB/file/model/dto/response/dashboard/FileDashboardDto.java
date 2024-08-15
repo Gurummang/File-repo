@@ -25,7 +25,7 @@ public class FileDashboardDto {
         this.totalVolume = totalVolume;
         this.totalDlp = totalDlp;
         this.totalMalware = totalMalware;
-        this.totalType = totalType;
-        this.statistics = statistics;
+        this.totalType = List.copyOf(totalType);
+        this.statistics = List.copyOf(statistics);
     }
 }

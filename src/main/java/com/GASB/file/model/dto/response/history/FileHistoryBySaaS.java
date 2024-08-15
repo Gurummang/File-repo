@@ -17,8 +17,8 @@ public class FileHistoryBySaaS {
     private List<FileRelationEdges> edges;
 
     public FileHistoryBySaaS(List<FileRelationNodes> slack, List<FileRelationNodes> googleDrive, List<FileRelationEdges> edges){
-        this.slack = slack;
-        this.googleDrive =googleDrive;
-        this.edges = edges;
+        this.slack = List.copyOf(slack);
+        this.googleDrive = List.copyOf(googleDrive);
+        this.edges = List.copyOf(edges);
     }
 }
