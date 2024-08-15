@@ -50,7 +50,7 @@ public class SlackFileService {
                     .fileId(fileUpload.getSaasFileId())
                     .timestamp(fileUpload.getTimestamp());
 
-            Activities activity = activitiesRepo.findBySaasFileId(fileUpload.getSaasFileId()).orElse(null);
+            Activities activity = activitiesRepo.findAllBySaasFileIdAndTimeStamp(fileUpload.getSaasFileId(), fileUpload.getTimestamp());
             if (activity != null) {
                 detailBuilder.fileName(activity.getFileName());
                 MonitoredUsers user = slackUserRepo.findByUserId(activity.getUser().getUserId()).orElse(null);
