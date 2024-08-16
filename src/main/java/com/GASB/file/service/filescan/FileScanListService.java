@@ -93,7 +93,7 @@ public class FileScanListService {
                 .date(activities != null ? activities.getEventTs() : null)
                 .vtReport(convertToVtReportDto(vtReport))
                 .fileStatus(convertToFileStatusDto(fileStatus))
-                .GScan(createInnerScanDto(fileUpload.getId(), hash)) // Assuming GScan info should be included
+                .gscan(createInnerScanDto(fileUpload.getId(), hash)) // Assuming GScan info should be included
                 .build();
     }
 
