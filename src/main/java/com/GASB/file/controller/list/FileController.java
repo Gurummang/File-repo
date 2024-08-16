@@ -12,15 +12,12 @@ import com.GASB.file.service.dashboard.FileBoardReturnService;
 import com.GASB.file.service.filescan.FileScanListService;
 import com.GASB.file.service.history.FileHistoryService;
 import com.GASB.file.service.history.FileHistoryStatisticsService;
-import com.GASB.file.service.history.FileVisualizeService;
 import com.GASB.file.service.history.FileVisualizeTestService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 
 @RestController
@@ -52,19 +49,13 @@ public class FileController {
     @GetMapping("/board")
     @ValidateJWT
     public ResponseDto<FileDashboardDto> fileDashboardList(HttpServletRequest servletRequest){
-        Map<String, Object> response = new HashMap<>();
         try {
             if (servletRequest.getAttribute("error") != null) {
                 String errorMessage = (String) servletRequest.getAttribute("error");
-                response.put("status", 401);
-                response.put("error_message", errorMessage);
-                return ResponseDto.ofFail(response);
+                return ResponseDto.ofFail(errorMessage);
             }
             String email = (String) servletRequest.getAttribute("email");
-            long orgId = adminRepo.findByEmail(email)
-                    .orElseThrow(() -> new NoSuchElementException("Admin not found with email: " + email))
-                    .getOrg()
-                    .getId();
+            long orgId = adminRepo.findByEmail(email).get().getOrg().getId();
             FileDashboardDto fileDashboard = fileBoardReturnService.boardListReturn(orgId);
             return ResponseDto.ofSuccess(fileDashboard);
         } catch (Exception e) {
@@ -75,23 +66,18 @@ public class FileController {
     @GetMapping("/history")
     @ValidateJWT
     public ResponseDto<List<FileHistoryListDto>> fileHistoryList(HttpServletRequest servletRequest) {
-        Map<String, Object> response = new HashMap<>();
+        if (servletRequest.getAttribute("error") != null) {
+            String errorMessage = (String) servletRequest.getAttribute("error");
+            return ResponseDto.ofFail("errrrrrr!!!!!");
+        }
         try {
-            if (servletRequest.getAttribute("error") != null) {
-                String errorMessage = (String) servletRequest.getAttribute("error");
-                response.put("status", 401);
-                response.put("error_message", errorMessage);
-                return ResponseDto.ofFail(response);
-            }
             String email = (String) servletRequest.getAttribute("email");
-            long orgId = adminRepo.findByEmail(email)
-                    .orElseThrow(() -> new NoSuchElementException("Admin not found with email: " + email))
-                    .getOrg()
-                    .getId();
+            long orgId = adminRepo.findByEmail(email).get().getOrg().getId();
 
             List<FileHistoryListDto> fileHistory = fileHistoryService.historyListReturn(orgId);
             return ResponseDto.ofSuccess(fileHistory);
         } catch (Exception e) {
+            System.out.println("여기 걸림;;;;");
             return ResponseDto.ofFail(e.getMessage());
         }
     }
@@ -99,19 +85,13 @@ public class FileController {
     @GetMapping("/history/statistics")
     @ValidateJWT
     public ResponseDto<FileHistoryTotalDto> fileHistoryStatisticsList(HttpServletRequest servletRequest){
-        Map<String, Object> response = new HashMap<>();
         try {
             if (servletRequest.getAttribute("error") != null) {
                 String errorMessage = (String) servletRequest.getAttribute("error");
-                response.put("status", 401);
-                response.put("error_message", errorMessage);
-                return ResponseDto.ofFail(response);
+                return ResponseDto.ofFail(errorMessage);
             }
             String email = (String) servletRequest.getAttribute("email");
-            long orgId = adminRepo.findByEmail(email)
-                    .orElseThrow(() -> new NoSuchElementException("Admin not found with email: " + email))
-                    .getOrg()
-                    .getId();
+            long orgId = adminRepo.findByEmail(email).get().getOrg().getId();
             FileHistoryTotalDto fileHistoryStatistics = fileHistoryStatisticsService.eventStatistics(orgId);
             return ResponseDto.ofSuccess(fileHistoryStatistics);
         } catch (Exception e){
@@ -122,19 +102,13 @@ public class FileController {
     @PostMapping("/history/visualize")
     @ValidateJWT
     public ResponseDto<FileHistoryBySaaS> fileHistoryVisualize(@RequestBody EventIdRequest eventIdRequest, HttpServletRequest servletRequest){
-        Map<String, Object> response = new HashMap<>();
         try {
             if (servletRequest.getAttribute("error") != null) {
                 String errorMessage = (String) servletRequest.getAttribute("error");
-                response.put("status", 401);
-                response.put("error_message", errorMessage);
-                return ResponseDto.ofFail(response);
+                return ResponseDto.ofFail(errorMessage);
             }
             String email = (String) servletRequest.getAttribute("email");
-            long orgId = adminRepo.findByEmail(email)
-                    .orElseThrow(() -> new NoSuchElementException("Admin not found with email: " + email))
-                    .getOrg()
-                    .getId();
+            long orgId = adminRepo.findByEmail(email).get().getOrg().getId();
             long eventId = eventIdRequest.getEventId();
             FileHistoryBySaaS fileHistoryBySaaS = fileVisualizeTestService.getFileHistoryBySaaS(eventId, orgId);
             return ResponseDto.ofSuccess(fileHistoryBySaaS);
@@ -144,22 +118,17 @@ public class FileController {
     }
 
 
-    @GetMapping("/scan")
-    @ValidateJWT
-    public ResponseDto<FileListResponse> getFileList(HttpServletRequest servletRequest) {
-        Map<String, Object> response = new HashMap<>();
+    @PostMapping("/scan")
+//    @ValidateJWT
+    public ResponseDto<FileListResponse> getFileList(@RequestBody OrgIdRequest orgIdRequest) {
         try {
-            if (servletRequest.getAttribute("error") != null) {
-                String errorMessage = (String) servletRequest.getAttribute("error");
-                response.put("status", 401);
-                response.put("error_message", errorMessage);
-                return ResponseDto.ofFail(response);
-            }
-            String email = (String) servletRequest.getAttribute("email");
-            long orgId = adminRepo.findByEmail(email)
-                    .orElseThrow(() -> new NoSuchElementException("Admin not found with email: " + email))
-                    .getOrg()
-                    .getId();
+//            if (servletRequest.getAttribute("error") != null) {
+//                String errorMessage = (String) servletRequest.getAttribute("error");
+//                return ResponseDto.ofFail(errorMessage);
+//            }
+//            String email = (String) servletRequest.getAttribute("email");
+//            long orgId = adminRepo.findByEmail(email).get().getOrg().getId();
+            long orgId = orgIdRequest.getOrgId();
             FileListResponse fileListResponse = fileScanListService.getFileList(orgId);
             return ResponseDto.ofSuccess(fileListResponse);
         } catch (Exception e){

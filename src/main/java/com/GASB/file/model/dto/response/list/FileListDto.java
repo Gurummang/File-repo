@@ -20,5 +20,5 @@ public class FileListDto {
     private LocalDateTime date;
     private VtReportDto vtReport;
     private FileStatusDto fileStatus;
-    private InnerScanDto GScan;
+    private InnerScanDto gscan;
 }
