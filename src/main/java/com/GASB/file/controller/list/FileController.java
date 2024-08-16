@@ -2,7 +2,6 @@ package com.GASB.file.controller.list;
 
 import com.GASB.file.annotation.JWT.ValidateJWT;
 import com.GASB.file.model.dto.request.EventIdRequest;
-import com.GASB.file.model.dto.request.OrgIdRequest;
 import com.GASB.file.model.dto.response.dashboard.FileDashboardDto;
 import com.GASB.file.model.dto.response.history.*;
 import com.GASB.file.model.dto.response.list.FileListResponse;
@@ -14,13 +13,11 @@ import com.GASB.file.service.filescan.FileScanListService;
 import com.GASB.file.service.history.FileHistoryService;
 import com.GASB.file.service.history.FileHistoryStatisticsService;
 import com.GASB.file.service.history.FileVisualizeTestService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @RestController
@@ -33,6 +30,10 @@ public class FileController {
     private final FileVisualizeTestService fileVisualizeTestService;
     private final FileScanListService fileScanListService;
     private final AdminRepo adminRepo;
+    private static final String INVALID_JWT_MSG = "Invalid JWT: email attribute is missing.";
+    private static final String ERROR = "error";
+    private static final String EMAIL = "email";
+    private static final String EMAIL_NOT_FOUND = "Admin not found with email: ";
 
     @Autowired
     public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService,
@@ -52,28 +53,20 @@ public class FileController {
     @GetMapping("/board")
     @ValidateJWT
     public ResponseDto<FileDashboardDto> fileDashboardList(HttpServletRequest servletRequest){
-        // JWT 검증 실패 여부를 확인
-        if (servletRequest.getAttribute("error") != null) {
-            String errorMessage = (String) servletRequest.getAttribute("error");
-            return ResponseDto.ofFail(errorMessage);
-        }
-//        Object errorAttr = servletRequest.getAttribute("error");
-//        if (errorAttr != null) {
-//            String errorMessage = (String) errorAttr;
-//            return ResponseDto.ofFail(errorMessage);  // 에러 메시지 반환
-//        }
-
         try {
-            String email = (String) servletRequest.getAttribute("email");
+            if (servletRequest.getAttribute(ERROR) != null) {
+                String errorMessage = (String) servletRequest.getAttribute(ERROR);
+                return ResponseDto.ofFail(errorMessage);
+            }
+            String email = (String) servletRequest.getAttribute(EMAIL);
 
-            // email 속성이 null인 경우 처리
             if (email == null) {
-                return ResponseDto.ofFail("Invalid JWT: email attribute is missing.");
+                return ResponseDto.ofFail(INVALID_JWT_MSG);
             }
 
             Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
             if (adminOptional.isEmpty()) {
-                return ResponseDto.ofFail("Admin not found with email: " + email);
+                return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
             }
 
             long orgId = adminOptional.get().getOrg().getId();
@@ -87,28 +80,20 @@ public class FileController {
     @GetMapping("/history")
     @ValidateJWT
     public ResponseDto<List<FileHistoryListDto>> fileHistoryList(HttpServletRequest servletRequest) {
-        // JWT 검증 실패 여부를 확인
-//        Object errorAttr = servletRequest.getAttribute("error");
-//        if (errorAttr != null) {
-//            String errorMessage = (String) errorAttr;
-//            return ResponseDto.ofFail(errorMessage);  // 에러 메시지 반환
-//        }
-
         try {
-            if (servletRequest.getAttribute("error") != null) {
-                String errorMessage = (String) servletRequest.getAttribute("error");
+            if (servletRequest.getAttribute(ERROR) != null) {
+                String errorMessage = (String) servletRequest.getAttribute(ERROR);
                 return ResponseDto.ofFail(errorMessage);
             }
-            String email = (String) servletRequest.getAttribute("email");
+            String email = (String) servletRequest.getAttribute(EMAIL);
 
-            // email 속성이 null인 경우 처리
             if (email == null) {
-                return ResponseDto.ofFail("Invalid JWT: email attribute is missing.");
+                return ResponseDto.ofFail(INVALID_JWT_MSG);
             }
 
             Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
             if (adminOptional.isEmpty()) {
-                return ResponseDto.ofFail("Admin not found with email: " + email);
+                return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
             }
 
             long orgId = adminOptional.get().getOrg().getId();
@@ -119,30 +104,23 @@ public class FileController {
         }
     }
 
-
-
-
     @GetMapping("/history/statistics")
     @ValidateJWT
     public ResponseDto<FileHistoryTotalDto> fileHistoryStatisticsList(HttpServletRequest servletRequest){
-        // JWT 검증 실패 여부를 확인
-        Object errorAttr = servletRequest.getAttribute("error");
-        if (errorAttr != null) {
-            String errorMessage = (String) errorAttr;
-            return ResponseDto.ofFail(errorMessage);  // 에러 메시지 반환
-        }
-
         try {
-            String email = (String) servletRequest.getAttribute("email");
+            if (servletRequest.getAttribute(ERROR) != null) {
+                String errorMessage = (String) servletRequest.getAttribute(ERROR);
+                return ResponseDto.ofFail(errorMessage);
+            }
+            String email = (String) servletRequest.getAttribute(EMAIL);
 
-            // email 속성이 null인 경우 처리
             if (email == null) {
-                return ResponseDto.ofFail("Invalid JWT: email attribute is missing.");
+                return ResponseDto.ofFail(INVALID_JWT_MSG);
             }
 
             Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
             if (adminOptional.isEmpty()) {
-                return ResponseDto.ofFail("Admin not found with email: " + email);
+                return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
             }
 
             long orgId = adminOptional.get().getOrg().getId();
@@ -156,24 +134,20 @@ public class FileController {
     @PostMapping("/history/visualize")
     @ValidateJWT
     public ResponseDto<FileHistoryBySaaS> fileHistoryVisualize(@RequestBody EventIdRequest eventIdRequest, HttpServletRequest servletRequest){
-        // JWT 검증 실패 여부를 확인
-        Object errorAttr = servletRequest.getAttribute("error");
-        if (errorAttr != null) {
-            String errorMessage = (String) errorAttr;
-            return ResponseDto.ofFail(errorMessage);  // 에러 메시지 반환
-        }
-
         try {
-            String email = (String) servletRequest.getAttribute("email");
+            if (servletRequest.getAttribute(ERROR) != null) {
+                String errorMessage = (String) servletRequest.getAttribute(ERROR);
+                return ResponseDto.ofFail(errorMessage);
+            }
+            String email = (String) servletRequest.getAttribute(EMAIL);
 
-            // email 속성이 null인 경우 처리
             if (email == null) {
-                return ResponseDto.ofFail("Invalid JWT: email attribute is missing.");
+                return ResponseDto.ofFail(INVALID_JWT_MSG);
             }
 
             Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
             if (adminOptional.isEmpty()) {
-                return ResponseDto.ofFail("Admin not found with email: " + email);
+                return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
             }
 
             long orgId = adminOptional.get().getOrg().getId();
@@ -185,37 +159,30 @@ public class FileController {
         }
     }
 
-
-    @PostMapping("/scan")
-//    @ValidateJWT
-    public ResponseDto<FileListResponse> getFileList(@RequestBody OrgIdRequest orgIdRequest) {
+    @GetMapping("/scan")
+    @ValidateJWT
+    public ResponseDto<FileListResponse> getFileList(HttpServletRequest servletRequest) {
         try {
-//            if (servletRequest.getAttribute("error") != null) {
-//                String errorMessage = (String) servletRequest.getAttribute("error");
-//                return ResponseDto.ofFail(errorMessage);
-//            }
-//            String email = (String) servletRequest.getAttribute("email");
-//            long orgId = adminRepo.findByEmail(email).get().getOrg().getId();
-            long orgId = orgIdRequest.getOrgId();
+            if (servletRequest.getAttribute(ERROR) != null) {
+                String errorMessage = (String) servletRequest.getAttribute(ERROR);
+                return ResponseDto.ofFail(errorMessage);
+            }
+            String email = (String) servletRequest.getAttribute(EMAIL);
+
+            if (email == null) {
+                return ResponseDto.ofFail(INVALID_JWT_MSG);
+            }
+
+            Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
+            if (adminOptional.isEmpty()) {
+                return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
+            }
+
+            long orgId = adminOptional.get().getOrg().getId();
             FileListResponse fileListResponse = fileScanListService.getFileList(orgId);
             return ResponseDto.ofSuccess(fileListResponse);
         } catch (Exception e){
             return ResponseDto.ofFail(e.getMessage());
         }
-    }
-
-    @GetMapping("/cookies")
-    public String checkCookies(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) {
-            return "No cookies found";
-        }
-
-        for (Cookie cookie : cookies) {
-            System.out.println("Cookie Name: " + cookie.getName());
-            System.out.println("Cookie Value: " + cookie.getValue());
-        }
-
-        return "Cookies checked, see server logs";
     }
 }

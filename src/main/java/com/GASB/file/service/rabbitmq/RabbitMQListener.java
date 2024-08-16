@@ -12,8 +12,13 @@ public class RabbitMQListener {
 
     private static final Logger logger = LoggerFactory.getLogger(RabbitMQListener.class);
 
+    private final FileGroupService fileGroupService;
+
     @Autowired
-    private FileGroupService fileGroupService;
+    public RabbitMQListener(FileGroupService fileGroupService){
+        this.fileGroupService =fileGroupService;
+    }
+
 
     @RabbitListener(queues = "#{@rabbitMQProperties.groupingQueue}")
     public void onVtReportRequestReceived(long eventId) {
