@@ -21,7 +21,7 @@ public class FileVisualizeService {
     private final FileUploadRepo fileUploadRepo;
     private final FileGroupRepo fileGroupRepo;
     private final FileSimilarService fileSimilarService;
-    private static final String FILE_UPLOAD = "file_uploaded";
+    private static final String FILE_UPLOAD = "file_upload";
     private static final String SLACK = "slack";
     private static final String GOOGLE_DRIVE = "googleDrive";
 
@@ -211,7 +211,7 @@ public class FileVisualizeService {
     private List<Activities> findAndSortActivitiesByHash(Activities activity) {
         return activitiesRepo.findByHash(getSaltedHash(activity))
                 .stream()
-                .filter(a -> FILE_UPLOAD.equals(a.getEventType()))  // 'file_uploaded' 타입만 필터링
+                .filter(a -> FILE_UPLOAD.equals(a.getEventType()))  // 'file_upload' 타입만 필터링
                 .sorted(Comparator.comparing(Activities::getEventTs))  // 시간 순서로 정렬
                 .collect(Collectors.toList());
     }

@@ -15,7 +15,7 @@ public interface ActivitiesRepo extends JpaRepository<Activities, Long> {
 
     Optional<Activities> findBySaasFileId(String fileId);
 
-    @Query("SELECT a FROM Activities a WHERE a.saasFileId = :saasFileId AND a.eventType = 'file_uploaded'")
+    @Query("SELECT a FROM Activities a WHERE a.saasFileId = :saasFileId AND a.eventType = 'file_upload'")
     Activities getActivitiesBySaaSFileId(@Param("saasFileId") String saasFileId);
 
     @Query("SELECT a FROM Activities a WHERE a.saasFileId = :saasFileId AND a.eventTs = :timestamp")
@@ -48,7 +48,7 @@ public interface ActivitiesRepo extends JpaRepository<Activities, Long> {
     );
 
     @Query("SELECT DATE(av.eventTs) AS date, " +
-            "SUM(CASE WHEN av.eventType = 'file_uploaded' THEN 1 ELSE 0 END) AS uploadCount, " +
+            "SUM(CASE WHEN av.eventType = 'file_upload' THEN 1 ELSE 0 END) AS uploadCount, " +
             "SUM(CASE WHEN av.eventType = 'file_changed' THEN 1 ELSE 0 END) AS modifyCount, " +
             "SUM(CASE WHEN av.eventType = 'file_deleted' THEN 1 ELSE 0 END) AS deletedCount, " +
             "SUM(CASE WHEN av.eventType = 'file_moved' THEN 1 ELSE 0 END) AS movedCount " +
@@ -67,7 +67,7 @@ public interface ActivitiesRepo extends JpaRepository<Activities, Long> {
             "FROM Activities av " +
             "JOIN av.user mu " +
             "JOIN mu.orgSaaS os " +
-            "WHERE os.org.id = :orgId AND av.eventType = 'file_uploaded'")
+            "WHERE os.org.id = :orgId AND av.eventType = 'file_upload'")
     int findTotalUploadCount(@Param("orgId") long orgId);
 
     @Query("SELECT COUNT(av) " +
