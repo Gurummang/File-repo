@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -19,6 +20,7 @@ public class ResponseDto<T> {
     private String status;
     private Long fileId;
     private String message;
+    private Map<String, Object> error;
     private T data;
 
     public static <T> ResponseDto<T> ofSuccess() {
@@ -49,11 +51,10 @@ public class ResponseDto<T> {
                 .build();
     }
 
-    public static <T> ResponseDto<T> ofFail(Long fileId, String message) {
+    public static <T> ResponseDto<T> ofFail(Map<String, Object> error) {
         return ResponseDto.<T>builder()
                 .status(ERROR_STATUS)
-                .fileId(fileId)
-                .message(message)
+                .error(error)
                 .build();
     }
 }
