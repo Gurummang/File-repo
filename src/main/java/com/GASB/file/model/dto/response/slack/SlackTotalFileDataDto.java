@@ -13,6 +13,8 @@ import java.util.List;
 @AllArgsConstructor
 public class SlackTotalFileDataDto {
 
+    private static final String UNKNOWN = "unknown";
+    private static final String TROJAN = "Trojan";
     private String status;
     private List<FileDetail> files;
 
@@ -39,7 +41,7 @@ public class SlackTotalFileDataDto {
         @AllArgsConstructor
         public static class GScanResult {
             @Builder.Default
-            private String status = "unknown";
+            private String status = UNKNOWN;
             @Builder.Default
             private String typeMatch = "false";
             @Builder.Default
@@ -52,7 +54,7 @@ public class SlackTotalFileDataDto {
         @NoArgsConstructor
         public static class VtScanResult {
             @Builder.Default
-            private String threatLabel = "Trojan";
+            private String threatLabel = TROJAN;
 
             @Builder.Default
             private String hash = "03c7c0ace395d80182db07ae2c30f034";
@@ -63,17 +65,17 @@ public class SlackTotalFileDataDto {
             private int score = 60;
 
             @Builder.Default
-            private String v3 = "Trojan";
+            private String v3 = TROJAN;
             @Builder.Default
-            private String alyac = "Trojan";
+            private String alyac = TROJAN;
             @Builder.Default
-            private String kaspersky = "Trojan";
+            private String kaspersky = TROJAN;
             @Builder.Default
-            private String falcon = "Trojan";
+            private String falcon = TROJAN;
             @Builder.Default
-            private String avast = "Trojan";
+            private String avast = TROJAN;
             @Builder.Default
-            private String sentinelone = "Trojan";
+            private String sentinelone = TROJAN;
             @Builder.Default
             private String reportUrl = "https://www.virustotal.com/gui/file/03c7c0ace395d80182db07ae2c30f034/detection";
         }
@@ -84,11 +86,11 @@ public class SlackTotalFileDataDto {
         @AllArgsConstructor
         public static class DlpScanResult {
             @Builder.Default
-            private String status = "unknown";
+            private String status = UNKNOWN;
             @Builder.Default
-            private String result = "unknown";
+            private String result = UNKNOWN;
             @Builder.Default
-            private String details = "unknown";
+            private String details = UNKNOWN;
             @Builder.Default
             private List<String> sensitiveDataTypes = Collections.emptyList();
             @Builder.Default
