@@ -11,10 +11,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class FileBoardReturnService {
@@ -27,7 +24,7 @@ public class FileBoardReturnService {
         this.fileUploadRepo = fileUploadRepo;
     }
 
-    public FileDashboardDto boardListReturn(long orgId){
+    public FileDashboardDto boardListReturn(long orgId) {
 
         long totalCount = totalFilesCount(orgId);
         long totalVolume = totalFileSizeCount(orgId);
@@ -43,30 +40,41 @@ public class FileBoardReturnService {
                 .totalVolume(totalVolume)
                 .totalDlp(totalDlp)
                 .totalMalware(totalMalware)
-                .totalType(totalType)
-                .statistics(statistics)
+                .totalType(totalType != null ? totalType : Collections.emptyList())
+                .statistics(statistics != null ? statistics : Collections.emptyList())
                 .build();
     }
 
-    private long totalFilesCount(long orgId){
-        return fileUploadRepo.countFileByOrgId(orgId);
+    private long totalFilesCount(long orgId) {
+        // null을 처리하여 기본값 0L을 반환
+        Long count = fileUploadRepo.countFileByOrgId(orgId);
+        return count != null ? count : 0L;
     }
 
-    private long totalFileSizeCount(long orgId){
-        return fileUploadRepo.getTotalSizeByOrgId(orgId);
+    private long totalFileSizeCount(long orgId) {
+        // null을 처리하여 기본값 0L을 반환
+        Long totalSize = fileUploadRepo.getTotalSizeByOrgId(orgId);
+        return totalSize != null ? totalSize : 0L;
     }
 
-    private int totalDlpCount(long orgId){
-        return fileUploadRepo.countDlpIssuesByOrgId(orgId);
+    private int totalDlpCount(long orgId) {
+        // null을 처리하여 기본값 0을 반환
+        Integer count = fileUploadRepo.countDlpIssuesByOrgId(orgId);
+        return count != null ? count : 0;
     }
 
-    private int totalMalwareCount(long orgId){
-        return fileUploadRepo.countVtMalwareByOrgId(orgId) + fileUploadRepo.countSuspiciousMalwareByOrgId(orgId);
+    private int totalMalwareCount(long orgId) {
+        // null을 처리하여 기본값 0을 반환
+        Integer countVtMalware = fileUploadRepo.countVtMalwareByOrgId(orgId);
+        Integer countSuspiciousMalware = fileUploadRepo.countSuspiciousMalwareByOrgId(orgId);
+        return (countVtMalware != null ? countVtMalware : 0) +
+                (countSuspiciousMalware != null ? countSuspiciousMalware : 0);
     }
 
     private List<TotalTypeDto> getFileTypeDistribution(long orgId) {
-        // 리포지토리 메서드를 호출하여 파일 타입 분포를 가져옴
-        return fileUploadRepo.findFileTypeDistributionByOrgId(orgId);
+        // null을 처리하여 기본값 빈 리스트를 반환
+        List<TotalTypeDto> totalType = fileUploadRepo.findFileTypeDistributionByOrgId(orgId);
+        return totalType != null ? totalType : Collections.emptyList();
     }
 
     public List<StatisticsDto> getFileStatisticsMonth(long orgId) {
@@ -76,17 +84,14 @@ public class FileBoardReturnService {
 
         List<Object[]> results = fileUploadRepo.findStatistics(orgId, startDateTime, endDateTime);
 
-        // 날짜별로 집계
         Map<LocalDate, StatisticsDto> statisticsMap = new HashMap<>();
 
         for (Object[] row : results) {
-            // 결과에서 날짜와 집계 값 추출
             LocalDateTime timestamp = (LocalDateTime) row[0];
             LocalDate date = timestamp.toLocalDate();
             long totalSizeInBytes = ((Number) row[1]).longValue();
             long fileCount = ((Number) row[2]).longValue();
 
-            // 날짜별로 통계 집계
             StatisticsDto dto = statisticsMap.getOrDefault(date, new StatisticsDto(
                     date.format(dateFormatter),
                     0,
@@ -99,19 +104,14 @@ public class FileBoardReturnService {
             statisticsMap.put(date, dto);
         }
 
-        // 모든 날짜를 포함하도록 날짜 범위와 매핑된 데이터를 결합
         return allDates.stream()
-                .map(date -> {
-                    StatisticsDto dto = statisticsMap.getOrDefault(date, new StatisticsDto(
-                            date.format(dateFormatter),
-                            0,
-                            0
-                    ));
-                    return dto;
-                })
+                .map(date -> statisticsMap.getOrDefault(date, new StatisticsDto(
+                        date.format(dateFormatter),
+                        0,
+                        0
+                )))
                 .toList();
     }
-
 
     public List<LocalDate> getLast30Days() {
         List<LocalDate> dates = new ArrayList<>();
@@ -125,5 +125,5 @@ public class FileBoardReturnService {
 
         return dates;
     }
-
 }
+
