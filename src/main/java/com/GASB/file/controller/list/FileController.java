@@ -14,6 +14,7 @@ import com.GASB.file.service.filescan.FileScanListService;
 import com.GASB.file.service.history.FileHistoryService;
 import com.GASB.file.service.history.FileHistoryStatisticsService;
 import com.GASB.file.service.history.FileVisualizeTestService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -52,11 +53,15 @@ public class FileController {
     @ValidateJWT
     public ResponseDto<FileDashboardDto> fileDashboardList(HttpServletRequest servletRequest){
         // JWT 검증 실패 여부를 확인
-        Object errorAttr = servletRequest.getAttribute("error");
-        if (errorAttr != null) {
-            String errorMessage = (String) errorAttr;
-            return ResponseDto.ofFail(errorMessage);  // 에러 메시지 반환
+        if (servletRequest.getAttribute("error") != null) {
+            String errorMessage = (String) servletRequest.getAttribute("error");
+            return ResponseDto.ofFail(errorMessage);
         }
+//        Object errorAttr = servletRequest.getAttribute("error");
+//        if (errorAttr != null) {
+//            String errorMessage = (String) errorAttr;
+//            return ResponseDto.ofFail(errorMessage);  // 에러 메시지 반환
+//        }
 
         try {
             String email = (String) servletRequest.getAttribute("email");
@@ -83,13 +88,17 @@ public class FileController {
     @ValidateJWT
     public ResponseDto<List<FileHistoryListDto>> fileHistoryList(HttpServletRequest servletRequest) {
         // JWT 검증 실패 여부를 확인
-        Object errorAttr = servletRequest.getAttribute("error");
-        if (errorAttr != null) {
-            String errorMessage = (String) errorAttr;
-            return ResponseDto.ofFail(errorMessage);  // 에러 메시지 반환
-        }
+//        Object errorAttr = servletRequest.getAttribute("error");
+//        if (errorAttr != null) {
+//            String errorMessage = (String) errorAttr;
+//            return ResponseDto.ofFail(errorMessage);  // 에러 메시지 반환
+//        }
 
         try {
+            if (servletRequest.getAttribute("error") != null) {
+                String errorMessage = (String) servletRequest.getAttribute("error");
+                return ResponseDto.ofFail(errorMessage);
+            }
             String email = (String) servletRequest.getAttribute("email");
 
             // email 속성이 null인 경우 처리
@@ -193,5 +202,20 @@ public class FileController {
         } catch (Exception e){
             return ResponseDto.ofFail(e.getMessage());
         }
+    }
+
+    @GetMapping("/cookies")
+    public String checkCookies(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return "No cookies found";
+        }
+
+        for (Cookie cookie : cookies) {
+            System.out.println("Cookie Name: " + cookie.getName());
+            System.out.println("Cookie Value: " + cookie.getValue());
+        }
+
+        return "Cookies checked, see server logs";
     }
 }
