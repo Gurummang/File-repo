@@ -49,9 +49,9 @@ public interface ActivitiesRepo extends JpaRepository<Activities, Long> {
 
     @Query("SELECT DATE(av.eventTs) AS date, " +
             "SUM(CASE WHEN av.eventType = 'file_upload' THEN 1 ELSE 0 END) AS uploadCount, " +
-            "SUM(CASE WHEN av.eventType = 'file_changed' THEN 1 ELSE 0 END) AS modifyCount, " +
-            "SUM(CASE WHEN av.eventType = 'file_deleted' THEN 1 ELSE 0 END) AS deletedCount, " +
-            "SUM(CASE WHEN av.eventType = 'file_moved' THEN 1 ELSE 0 END) AS movedCount " +
+            "SUM(CASE WHEN av.eventType = 'file_change' THEN 1 ELSE 0 END) AS modifyCount, " +
+            "SUM(CASE WHEN av.eventType = 'file_delete' THEN 1 ELSE 0 END) AS deletedCount, " +
+            "SUM(CASE WHEN av.eventType = 'file_move' THEN 1 ELSE 0 END) AS movedCount " +
             "FROM Activities av " +
             "JOIN av.user mu " +
             "JOIN mu.orgSaaS os " +
@@ -74,21 +74,21 @@ public interface ActivitiesRepo extends JpaRepository<Activities, Long> {
             "FROM Activities av " +
             "JOIN av.user mu " +
             "JOIN mu.orgSaaS os " +
-            "WHERE os.org.id = :orgId AND av.eventType = 'file_deleted'")
+            "WHERE os.org.id = :orgId AND av.eventType = 'file_delete'")
     int findTotalDeletedCount(@Param("orgId") long orgId);
 
     @Query("SELECT COUNT(av) " +
             "FROM Activities av " +
             "JOIN av.user mu " +
             "JOIN mu.orgSaaS os " +
-            "WHERE os.org.id = :orgId AND av.eventType = 'file_changed'")
+            "WHERE os.org.id = :orgId AND av.eventType = 'file_change'")
     int findTotalChangedCount(@Param("orgId") long orgId);
 
     @Query("SELECT COUNT(av) " +
             "FROM Activities av " +
             "JOIN av.user mu " +
             "JOIN mu.orgSaaS os " +
-            "WHERE os.org.id = :orgId AND av.eventType = 'file_moved'")
+            "WHERE os.org.id = :orgId AND av.eventType = 'file_move'")
     int findTotalMovedCount(@Param("orgId") long orgId);
 
 }
