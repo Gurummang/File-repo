@@ -81,6 +81,10 @@ public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
     @Query("SELECT MIN(f.timestamp) FROM FileUpload f WHERE f.orgSaaS.id = :orgSaaSId AND f.saasFileId = :saasFileId")
     LocalDateTime findEarliestUploadTsByOrgSaaS_IdAndSaasFileId(@Param("orgSaaSId") long orgSaaSId, @Param("saasFileId") String saasFileId);
 
+    // 특정 orgSaaSId와 saasFileId에 대해 가장 최근의 hash를 가져오는 쿼리
+    @Query("SELECT f.hash FROM FileUpload f WHERE f.orgSaaS.id = :orgSaaSId AND f.saasFileId = :saasFileId AND f.timestamp = (SELECT MAX(f2.timestamp) FROM FileUpload f2 WHERE f2.orgSaaS.id = :orgSaaSId AND f2.saasFileId = :saasFileId)")
+    String findLatestHashBySaasFileId(@Param("orgSaaSId") long orgSaaSId, @Param("saasFileId") String saasFileId);
+
     @Query("SELECT f.hash FROM FileUpload f WHERE f.orgSaaS.id = :orgSaaSId AND f.saasFileId = :saasFileId AND f.timestamp = :eventTs")
     String findHashByOrgSaaS_IdAndSaasFileId(@Param("orgSaaSId") long orgSaaSId, @Param("saasFileId") String saasFileId, @Param("eventTs") LocalDateTime eventTs);
 }

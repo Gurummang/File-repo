@@ -1,7 +1,6 @@
 package com.GASB.file.service.history;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -9,9 +8,9 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import java.io.InputStream;
 
 @Service
+@Slf4j
 public class S3FileDownloadService {
 
-    private static final Logger logger = LoggerFactory.getLogger(S3FileDownloadService.class);
     private final S3Client s3Client;
 
     public S3FileDownloadService(S3Client s3Client){
@@ -34,11 +33,11 @@ public class S3FileDownloadService {
                     .build();
 
             InputStream inputStream = s3Client.getObject(getObjectRequest);
-            logger.info("File streaming started for bucket: {}, key: {}", bucketName, key);
+            log.info("File streaming started for bucket: {}, key: {}", bucketName, key);
             return inputStream;
 
         } catch (Exception e) {
-            logger.error("Failed to download file from S3. Bucket: {}, Key: {}, Error: {}",
+            log.error("Failed to download file from S3. Bucket: {}, Key: {}, Error: {}",
                     bucketName, key, e.getMessage(), e);
             throw new RuntimeException("Failed to download file from S3", e);
         }
