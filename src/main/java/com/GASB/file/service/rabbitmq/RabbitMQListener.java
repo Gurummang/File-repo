@@ -1,16 +1,14 @@
 package com.GASB.file.service.rabbitmq;
 
 import com.GASB.file.service.history.FileGroupService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 public class RabbitMQListener {
-
-    private static final Logger logger = LoggerFactory.getLogger(RabbitMQListener.class);
 
     private final FileGroupService fileGroupService;
 
@@ -22,7 +20,7 @@ public class RabbitMQListener {
 
     @RabbitListener(queues = "#{@rabbitMQProperties.groupingQueue}")
     public void onVtReportRequestReceived(long eventId) {
-        logger.info("received : {}", eventId);
+        log.info("received : {}", eventId);
         fileGroupService.groupFilesAndSave(eventId);
     }
 }

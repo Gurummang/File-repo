@@ -52,9 +52,16 @@ dependencies {
 	implementation 'commons-io:commons-io:2.11.0' 			// 확장자 분리용
 
 	// 문서 유사도 비교
-	implementation 'org.apache.poi:poi-ooxml:5.2.3'
-	implementation 'org.apache.pdfbox:pdfbox:3.0.0'
-	implementation 'org.apache.commons:commons-text:1.10.0'
+	// Apache POI for reading Excel files
+	// Apache POI for reading Excel files
+	implementation 'org.apache.poi:poi:4.1.2'
+	implementation 'org.apache.poi:poi-ooxml:4.1.2'
+	implementation 'org.apache.poi:poi-ooxml-schemas:4.1.2' // Use an available version
+	implementation 'org.apache.xmlbeans:xmlbeans:3.1.0'
+	implementation 'org.apache.pdfbox:pdfbox:2.0.30'
+	implementation 'org.apache.tika:tika-core:2.9.0'
+	implementation 'org.apache.tika:tika-parsers:2.9.0'
+
 	implementation 'software.amazon.awssdk:s3:2.20.0'
 
 	// spotbugs

@@ -2,21 +2,30 @@ package com.GASB.file.service.history;
 
 import com.GASB.file.model.entity.*;
 import com.GASB.file.repository.file.ActivitiesRepo;
+import com.GASB.file.repository.file.FileGroupRepo;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.text.similarity.JaroWinklerSimilarity;
+import org.apache.tika.exception.TikaException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class FileSimilarService {
 
     private final ActivitiesRepo activitiesRepo;
+    private final FileGroupRepo fileGroupRepo;
+    private final DocumentCompareService documentCompareService;
 
     @Autowired
-    public FileSimilarService(ActivitiesRepo activitiesRepo) {
+    public FileSimilarService(ActivitiesRepo activitiesRepo, FileGroupRepo fileGroupRepo, DocumentCompareService documentCompareService) {
         this.activitiesRepo = activitiesRepo;
+        this.fileGroupRepo = fileGroupRepo;
+        this.documentCompareService = documentCompareService;
     }
 
     // 유사도 측정
@@ -88,6 +97,22 @@ public class FileSimilarService {
         String actFileName = noExtension(activity.get().getFileName());
         String cmpFileName = noExtension(cmpAct.get().getFileName());
         double nameSimilarity = calculateSim(actFileName, cmpFileName);
+
+        String actType = fileGroupRepo.findGroupTypeById(actId);
+        String cmpType = fileGroupRepo.findGroupTypeById(cmpId);
+        // 문서 유사도 계산
+        double fileSimilar;
+        try {
+            if(actType.equals("document") && cmpType.equals("document")) {
+                fileSimilar = documentCompareService.documentSimilar(activity.get(), cmpAct.get());
+                log.info("{} {} {}",nameSimilarity, typeSimilarity, fileSimilar);
+                return (nameSimilarity * 0.6 + typeSimilarity * 0.4) * 0.4 + fileSimilar * 0.6;
+            }
+        } catch (IOException | TikaException e) {
+            // 예외 처리
+            log.info(e.getMessage());
+            return 0; // 유사도 계산 실패
+        }
 
         // 4. 총 유사도 계산 (이름 유사도 60% + 확장자 유사도 40%)
         return (nameSimilarity * 0.6) + (typeSimilarity * 0.4);
