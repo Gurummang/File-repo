@@ -43,7 +43,7 @@ public class FileGroupService {
         return switch (extension) {
             case "exe", "dll", "elf" -> "execute";
             case "jpg", "jpeg", "png", "gif", "webp", "svg" -> "image";
-            case "docx", "hwp", "doc", "xls", "xlsx", "ppt", "pptx", "pdf", "txt", "html" -> "document";
+            case "docx", "hwp", "doc", "xls", "xlsx", "ppt", "pptx", "pdf", "text", "txt", "html" -> "document";
             default -> "unknown"; // 기타 확장자는 "unknown"으로 처리
         };
     }
