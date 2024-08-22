@@ -103,6 +103,7 @@ public class FileVisualizeTestService {
         String saasName = getSaasName(startActivity);
         List<FileRelationNodes> nodesList = new ArrayList<>(nodesMap.values());
         populateFileHistoryMap(fileHistoryMap, saasName, nodesList);
+        log.info("Added Nodes: {}", nodesList);
         //필요한 정보를 필터링한 후 최종적으로 Slack과 Google Drive에 해당하는 파일 히스토리 및 엣지 데이터를 반환합니다.
         // Filter out transitive edges
         List<FileRelationEdges> filteredEdges = filterTransitiveEdges(edges);
