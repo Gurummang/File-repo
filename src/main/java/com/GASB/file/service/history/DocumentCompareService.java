@@ -1,8 +1,7 @@
 package com.GASB.file.service.history;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Optional;
@@ -30,8 +29,6 @@ import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.tika.Tika;
 import org.apache.tika.exception.TikaException;
 import org.springframework.stereotype.Service;
-
-import java.io.File;
 
 @Service
 @Slf4j
@@ -105,6 +102,7 @@ public class DocumentCompareService {
             case "ppt", "pptx" -> extractTextFromPptx(bucketName, key);
             case "doc", "docx" -> extractTextFromDocx(bucketName, key);
             case "pdf" -> extractTextFromPdf(bucketName, key);
+            case "txt","log","text" -> extractTextFromTxt(bucketName, key);
             default -> "";
         };
     }
@@ -211,5 +209,21 @@ public class DocumentCompareService {
 
         return (double) intersection.size() / union.size();
     }
+
+    public String extractTextFromTxt(String bucketName, String key) throws IOException {
+        StringBuilder text = new StringBuilder();
+        try (InputStream fis = s3FileDownloadService.downloadFile(bucketName, key);
+             InputStreamReader reader = new InputStreamReader(fis, StandardCharsets.UTF_8); // UTF-8 인코딩 설정
+             BufferedReader bufferedReader = new BufferedReader(reader)) {
+
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                text.append(line).append("\n");
+            }
+        }
+        return text.toString();
+    }
+
+
 }
 
