@@ -91,4 +91,6 @@ public interface ActivitiesRepo extends JpaRepository<Activities, Long> {
             "WHERE os.org.id = :orgId AND av.eventType = 'file_move'")
     int findTotalMovedCount(@Param("orgId") long orgId);
 
+    @Query("SELECT a FROM Activities a WHERE a.user.orgSaaS.org.id = :orgId AND a.saasFileId IN (SELECT f.saasFileId FROM FileUpload f WHERE f.hash = :hash) AND a.eventTs IN (SELECT f.timestamp FROM FileUpload f WHERE f.hash = :hash)")
+    List<Activities> findByHashAndOrgId(@Param("hash") String hash, @Param("orgId") long orgId);
 }
