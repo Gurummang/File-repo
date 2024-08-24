@@ -4,16 +4,18 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Getter
 @NoArgsConstructor
 @Builder
 public class NodeAndSimilarity {
-    private FileRelationNodes fileRelationNodes;
-    private String saasName;
+    private List<FileRelationNodes> slackNodes;
+    private List<FileRelationNodes> googleDriveNodes;
 
-    public NodeAndSimilarity(FileRelationNodes fileRelationNodes, String saasName) {
-        this.fileRelationNodes = fileRelationNodes;
-        this.saasName = saasName;
+    public NodeAndSimilarity(List<FileRelationNodes> slackNodes, List<FileRelationNodes> googleDriveNodes) {
+        this.slackNodes = slackNodes;
+        this.googleDriveNodes = googleDriveNodes;
     }
 }
 
