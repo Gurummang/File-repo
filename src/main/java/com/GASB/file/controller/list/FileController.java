@@ -12,6 +12,7 @@ import com.GASB.file.service.dashboard.FileBoardReturnService;
 import com.GASB.file.service.filescan.FileScanListService;
 import com.GASB.file.service.history.FileHistoryService;
 import com.GASB.file.service.history.FileHistoryStatisticsService;
+import com.GASB.file.service.history.FileVisualizeService;
 import com.GASB.file.service.history.FileVisualizeTestService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +28,7 @@ public class FileController {
     private final FileBoardReturnService fileBoardReturnService;
     private final FileHistoryService fileHistoryService;
     private final FileHistoryStatisticsService fileHistoryStatisticsService;
-    private final FileVisualizeTestService fileVisualizeTestService;
+    private final FileVisualizeService fileVisualizeTestService;
     private final FileScanListService fileScanListService;
     private final AdminRepo adminRepo;
     private static final String INVALID_JWT_MSG = "Invalid JWT: email attribute is missing.";
@@ -37,7 +38,7 @@ public class FileController {
 
     @Autowired
     public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService,
-                          FileVisualizeTestService fileVisualizeTestService, FileScanListService fileScanListService, AdminRepo adminRepo){
+                          FileVisualizeService fileVisualizeTestService, FileScanListService fileScanListService, AdminRepo adminRepo){
         this.fileBoardReturnService = fileBoardReturnService;
         this.fileHistoryService = fileHistoryService;
         this.fileHistoryStatisticsService = fileHistoryStatisticsService;
