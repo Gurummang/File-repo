@@ -7,7 +7,6 @@ import java.util.*;
 
 import com.GASB.file.model.entity.Activities;
 import com.GASB.file.model.entity.StoredFile;
-import com.GASB.file.repository.file.ActivitiesRepo;
 import com.GASB.file.repository.file.FileUploadRepo;
 import com.GASB.file.repository.file.StoredFileRepo;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +23,6 @@ import org.apache.poi.xslf.usermodel.XSLFTextShape;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
-import org.apache.tika.Tika;
 import org.apache.tika.exception.TikaException;
 import org.springframework.stereotype.Service;
 
@@ -32,15 +30,13 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class DocumentCompareService {
 
-    private final ActivitiesRepo activitiesRepo;
     private final FileUploadRepo fileUploadRepo;
     private final StoredFileRepo storedFileRepo;
     private final S3FileDownloadService s3FileDownloadService;
     private static final int SHINGLE_LENGTH = 3;
 
-    public DocumentCompareService(ActivitiesRepo activitiesRepo, FileUploadRepo fileUploadRepo, StoredFileRepo storedFileRepo,
+    public DocumentCompareService(FileUploadRepo fileUploadRepo, StoredFileRepo storedFileRepo,
                                   S3FileDownloadService s3FileDownloadService) {
-        this.activitiesRepo = activitiesRepo;
         this.fileUploadRepo = fileUploadRepo;
         this.storedFileRepo = storedFileRepo;
         this.s3FileDownloadService = s3FileDownloadService;
@@ -179,7 +175,6 @@ public class DocumentCompareService {
         for (int i = 0; i < text.length() - SHINGLE_LENGTH + 1; i++) {
             shingles.add(text.substring(i, i + SHINGLE_LENGTH));
         }
-        log.info("Created shingles: {}", shingles);
         return shingles;
     }
 

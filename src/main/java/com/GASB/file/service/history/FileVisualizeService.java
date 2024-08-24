@@ -10,8 +10,6 @@ import org.apache.tika.exception.TikaException;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -24,8 +22,6 @@ public class FileVisualizeService {
     private final FileGroupRepo fileGroupRepo;
     private final FileSimilar3Service fileSimilarService;
     private static final String FILE_UPLOAD = "file_upload";
-    private static final String SLACK = "slack";
-    private static final String GOOGLE_DRIVE = "googledrive";
 
     public FileVisualizeService(ActivitiesRepo activitiesRepo, FileUploadRepo fileUploadRepo, FileGroupRepo fileGroupRepo, FileSimilar3Service fileSimilarService) {
         this.activitiesRepo = activitiesRepo;
@@ -88,40 +84,46 @@ public class FileVisualizeService {
     //DFS를 통해 파일 간의 관계를 탐색하고, 노드 및 엣지 정보를 갱신합니다.
     //필요한 정보를 필터링한 후 최종적으로 Slack과 Google Drive에 해당하는 파일 히스토리 및 엣지 데이터를 반환합니다.
     public FileHistoryBySaaS getFileHistoryBySaaS(long eventId, long orgId) {
-        //활동(Activity) 데이터를 가져오고 시작 활동을 기준으로 히스토리를 추적합니다.
+        // 활동(Activity) 데이터를 가져옵니다.
         Activities activity = getActivity(eventId);
         Activities startActivity = activitiesRepo.getActivitiesBySaaSFileId(activity.getSaasFileId());
 
-        //파일 히스토리 맵을 초기화하고, 노드와 엣지를 생성합니다.
-        Map<String, List<FileRelationNodes>> fileHistoryMap = initializeFileHistoryMap();
+        // 파일 히스토리 맵 초기화
         Set<Activities> nodes = new HashSet<>();
         List<FileRelationEdges> edges = new ArrayList<>();
         Set<Long> seenEventIds = new HashSet<>();
 
-        //DFS를 통해 파일 간의 관계를 탐색하고, 노드 및 엣지 정보를 갱신합니다.
+        // DFS를 통해 파일 간의 관계를 탐색합니다.
         exploreFileRelationsDFS(startActivity, 2, seenEventIds, nodes, edges, eventId, orgId);
         addGroupRelatedActivities(eventId, seenEventIds, nodes, edges, orgId);
 
-        String saasName = getSaasName(startActivity);
         log.info("Added Nodes: {}", nodes);
-        try {
-            List<FileRelationNodes> nodesList = fileSimilarService.getFileSimilarity(activity, nodes);
-            populateFileHistoryMap(fileHistoryMap, saasName, nodesList);
-        } catch (IOException | TikaException e) {
-            log.info("Error calculating file similarity", e);
-            // 필요시 적절한 대체 로직을 추가하거나 예외를 다시 던질 수 있습니다.
-        }
-        //필요한 정보를 필터링한 후 최종적으로 Slack과 Google Drive에 해당하는 파일 히스토리 및 엣지 데이터를 반환합니다.
-        // Filter out transitive edges
+
         List<FileRelationEdges> filteredEdges = filterTransitiveEdges(edges);
 
-        return FileHistoryBySaaS.builder()
-                .originNode(eventId)
-                .slack(fileHistoryMap.get(SLACK))
-                .googleDrive(fileHistoryMap.get(GOOGLE_DRIVE))
-                .edges(filteredEdges)
-                .build();
+        try {
+            // 파일 유사도 계산 및 결과 가져오기
+            NodeAndSimilarity nodesList = fileSimilarService.getFileSimilarity(activity, nodes);
+
+            return FileHistoryBySaaS.builder()
+                    .originNode(eventId)
+                    .slack(nodesList.getSlackNodes()) // Slack 노드 리스트
+                    .googleDrive(nodesList.getGoogleDriveNodes()) // Google Drive 노드 리스트
+                    .edges(filteredEdges) // 필터링된 엣지 리스트
+                    .build();
+        } catch (IOException | TikaException e) {
+            log.error("Error calculating file similarity", e);
+
+            // 예외 발생 시 빈 리스트를 사용하여 반환
+            return FileHistoryBySaaS.builder()
+                    .originNode(eventId)
+                    .slack(new ArrayList<>()) // 빈 Slack 리스트
+                    .googleDrive(new ArrayList<>()) // 빈 Google Drive 리스트
+                    .edges(filteredEdges) // 필터링된 엣지 리스트
+                    .build();
+        }
     }
+
 
     private void removeEventIdFromSeen(Set<Long> seenEventIds, long eventId) {
         // eventId가 seenEventIds에 존재하는 경우에만 제거
@@ -135,7 +137,6 @@ public class FileVisualizeService {
 
     private void addGroupRelatedActivities(long eventId, Set<Long> seenEventIds, Set<Activities> nodes, List<FileRelationEdges> edges, long orgId) {
         // 그룹 이름을 가져옴
-        log.info("---------------hihi-----------");
         String groupName = fileGroupRepo.findGroupNameById(eventId);
 
         // 동일한 그룹에 속하는 활동들을 가져옴
@@ -143,7 +144,6 @@ public class FileVisualizeService {
 
         // 활동들을 이벤트 발생 시간 기준으로 오름차순 정렬
         sameGroups.sort(Comparator.comparing(Activities::getEventTs));
-        log.info("fhifhi: " + sameGroups.stream().map(Activities::getId).collect(Collectors.toList()));
 
         removeEventIdFromSeen(seenEventIds, eventId);
         // 이전 활동 ID를 추적하기 위한 변수
@@ -152,8 +152,6 @@ public class FileVisualizeService {
         // 모든 활동을 처리
         for (Activities a : sameGroups) {
             if (!seenEventIds.contains(a.getId())) {
-                // 파일 관계 노드 생성
-                //FileRelationNodes targetNode = createFileRelationNodes(a, eventId);
                 nodes.add(a);
 
                 // 이전 활동과 현재 활동을 엣지로 연결
@@ -188,31 +186,6 @@ public class FileVisualizeService {
     private Activities getActivity(long eventId) {
         return activitiesRepo.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Activity not found"));
-    }
-
-    //파일 히스토리를 저장할 맵을 초기화
-    private Map<String, List<FileRelationNodes>> initializeFileHistoryMap() {
-        Map<String, List<FileRelationNodes>> fileHistoryMap = new HashMap<>();
-        fileHistoryMap.put(SLACK, new ArrayList<>());
-        fileHistoryMap.put(GOOGLE_DRIVE, new ArrayList<>());
-        return fileHistoryMap;
-    }
-
-    private String getSaasName(Activities activity) {
-        return activity.getUser().getOrgSaaS().getSaas().getSaasName().toLowerCase();
-    }
-
-    // SaaS 이름에 따라 해당 리스트에 노드 정보를 추가
-    private void populateFileHistoryMap(Map<String, List<FileRelationNodes>> fileHistoryMap, String saasName, List<FileRelationNodes> nodesList) {
-        // nodesList를 eventTs 필드를 기준으로 오름차순 정렬
-        nodesList.sort(Comparator.comparing(FileRelationNodes::getEventTs));
-
-        // saasName에 따라 파일 히스토리 맵에 정렬된 노드 리스트를 추가
-        if (SLACK.equals(saasName)) {
-            fileHistoryMap.get(SLACK).addAll(nodesList);
-        } else if (GOOGLE_DRIVE.equals(saasName)) {
-            fileHistoryMap.get(GOOGLE_DRIVE).addAll(nodesList);
-        }
     }
 
     //현재 활동을 처리하고, 이미 탐색된 활동을 추적하여 중복을 방지합니다.
@@ -307,13 +280,12 @@ public class FileVisualizeService {
     private void addRelatedActivities(List<Activities> relatedActivities, Activities startActivity, Set<Long> seenEventIds, Set<Activities> nodes, List<FileRelationEdges> edges, String edgeType, int currentDepth, long eventId, long orgId) {
         // 활동 리스트를 이벤트 발생 시간 기준으로 정렬 (오름차순)
         log.info("기준 노드: {}", startActivity.getId());
-        processCurrentActivity(startActivity, seenEventIds, nodes, eventId);
+        processCurrentActivity(startActivity, seenEventIds, nodes);
         relatedActivities.sort(Comparator.comparing(Activities::getEventTs));
         log.info("seenEventIds에 들어갔냐? :{}", seenEventIds.contains(startActivity.getId()));
         for (Activities relatedActivity : relatedActivities) {
             log.info("기준 노드에서 탐색할 노드: {}", relatedActivity.getId());
             if (!seenEventIds.contains(relatedActivity.getId()) && !relatedActivity.getId().equals(startActivity.getId())) {
-                // FileRelationNodes targetNode = createFileRelationNodes(relatedActivity, eventId);
                 nodes.add(relatedActivity);
 
                 log.info("기준 , 탐색 : {}, {}", startActivity.getId(), relatedActivity.getId());
@@ -337,9 +309,8 @@ public class FileVisualizeService {
     }
 
     //활동을 처리하고 노드를 생성한 후, 해당 활동이 이미 처리되었음을 기록
-    private void processCurrentActivity(Activities activity, Set<Long> seenEventIds, Set<Activities> nodes, long eventId) {
+    private void processCurrentActivity(Activities activity, Set<Long> seenEventIds, Set<Activities> nodes) {
         seenEventIds.add(activity.getId());
-        // FileRelationNodes node = createFileRelationNodes(activity, eventId);
         nodes.add(activity);
     }
 
