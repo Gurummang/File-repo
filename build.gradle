@@ -61,9 +61,6 @@ dependencies {
 	implementation 'org.apache.pdfbox:pdfbox:2.0.30'
 	implementation 'org.apache.tika:tika-core:2.9.0'
 	implementation 'org.apache.tika:tika-parsers:2.9.0'
-	implementation files('build/libs/tlsh-4.5.0.jar')
-	implementation files('build/libs/tlsh-4.5.0-javadoc.jar')
-	implementation files('build/libs/tlsh-4.5.0-sources.jar')
 	implementation 'software.amazon.awssdk:s3:2.20.0'
 
 	// spotbugs
