@@ -4,8 +4,8 @@ import com.GASB.file.model.entity.Activities;
 import com.GASB.file.model.entity.StoredFile;
 import com.GASB.file.repository.file.FileUploadRepo;
 import com.GASB.file.repository.file.StoredFileRepo;
-import com.trendmicro.tlsh.Tlsh;
-import com.trendmicro.tlsh.TlshCreator;
+import com.GASB.file.service.tlsh.Tlsh;
+import com.GASB.file.service.tlsh.TlshCreator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
