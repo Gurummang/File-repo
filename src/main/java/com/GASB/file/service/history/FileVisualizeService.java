@@ -136,9 +136,11 @@ public class FileVisualizeService {
     }
 
     private void addGroupRelatedActivities(long eventId, Set<Long> seenEventIds, Set<Activities> nodes, List<FileRelationEdges> edges, long orgId) {
+        log.info("-----------------hi!!!!----------------");
         // 그룹 이름을 가져옴
         String groupName = fileGroupRepo.findGroupNameById(eventId);
-
+        log.info(groupName);
+        log.info("orgID: {}", orgId);
         // 동일한 그룹에 속하는 활동들을 가져옴
         List<Activities> sameGroups = activitiesRepo.findByOrgIdAndGroupName(orgId, groupName);
 
