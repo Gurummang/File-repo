@@ -19,17 +19,13 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class FileSimilarityAsyncService {
 
-    private final DocumentCompareService documentCompareService;
-    private final FileGroupRepo fileGroupRepo;
     private final FileUploadRepo fileUploadRepo;
+    private final TlshFileComparator tlshFileComparator;
 
     @Autowired
-    public FileSimilarityAsyncService(DocumentCompareService documentCompareService,
-                                      FileGroupRepo fileGroupRepo,
-                                      FileUploadRepo fileUploadRepo) {
-        this.documentCompareService = documentCompareService;
-        this.fileGroupRepo = fileGroupRepo;
+    public FileSimilarityAsyncService(FileUploadRepo fileUploadRepo, TlshFileComparator tlshFileComparator) {
         this.fileUploadRepo = fileUploadRepo;
+        this.tlshFileComparator = tlshFileComparator;
     }
 
     @Async
@@ -37,31 +33,33 @@ public class FileSimilarityAsyncService {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 // 확장자 유사도 계산
-                String actExtension = FilenameUtils.getExtension(activity.getFileName()).toLowerCase();
-                String nodeExtension = FilenameUtils.getExtension(node.getFileName()).toLowerCase();
-                double typeSimilarity = typeSim(actExtension, nodeExtension);
+//                String actExtension = FilenameUtils.getExtension(activity.getFileName()).toLowerCase();
+//                String nodeExtension = FilenameUtils.getExtension(node.getFileName()).toLowerCase();
+//                double typeSimilarity = typeSim(actExtension, nodeExtension);
+//
+//                // 파일명 유사도 계산
+//                String actFileName = noExtension(activity.getFileName());
+//                String nodeFileName = noExtension(node.getFileName());
+//                double nameSimilarity = calculateSim(actFileName, nodeFileName);
+//
+//                String actType = fileGroupRepo.findGroupTypeById(activity.getId());
+//                String cmpType = fileGroupRepo.findGroupTypeById(node.getId());
+//
+//                // 최종 유사도 계산
+//                double finalNodeSimilarity;
+//                if(actType.equals("document") && cmpType.equals("document")) {
+//                    double fileSimilarity = documentCompareService.documentSimilar(activity, node);
+//                    log.info("{} {} {}",nameSimilarity, typeSimilarity, fileSimilarity);
+//                    finalNodeSimilarity = (nameSimilarity * 0.6 + typeSimilarity * 0.4) * 0.4 + fileSimilarity * 0.6;
+//                } else {
+//                    log.info("{} {}",nameSimilarity, typeSimilarity);
+//                    finalNodeSimilarity = (nameSimilarity * 0.6) + (typeSimilarity * 0.4);
+//                }
 
-                // 파일명 유사도 계산
-                String actFileName = noExtension(activity.getFileName());
-                String nodeFileName = noExtension(node.getFileName());
-                double nameSimilarity = calculateSim(actFileName, nodeFileName);
-
-                String actType = fileGroupRepo.findGroupTypeById(activity.getId());
-                String cmpType = fileGroupRepo.findGroupTypeById(node.getId());
-
-                // 최종 유사도 계산
-                double finalNodeSimilarity;
-                if(actType.equals("document") && cmpType.equals("document")) {
-                    double fileSimilarity = documentCompareService.documentSimilar(activity, node);
-                    log.info("{} {} {}",nameSimilarity, typeSimilarity, fileSimilarity);
-                    finalNodeSimilarity = (nameSimilarity * 0.6 + typeSimilarity * 0.4) * 0.4 + fileSimilarity * 0.6;
-                } else {
-                    log.info("{} {}",nameSimilarity, typeSimilarity);
-                    finalNodeSimilarity = (nameSimilarity * 0.6) + (typeSimilarity * 0.4);
-                }
+                double finalNodeSimilarity = tlshFileComparator.compareFiles(activity,node);
                 // 노드 생성 및 반환
                 return createFileRelationNodes(node, finalNodeSimilarity);
-            } catch (IOException | TikaException e) {
+            } catch (Exception e) {
                 log.error("Error processing similarity for node: {}", node, e);
                 return null; // 에러 발생 시 null 반환
             }
