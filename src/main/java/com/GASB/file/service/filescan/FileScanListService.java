@@ -83,7 +83,7 @@ public class FileScanListService {
             log.debug("No Activities found for fileUpload id: {}", fileUpload.getId());
         }
         return FileListDto.builder()
-                .id(storedFile.getId())
+                .id(fileUpload.getId())
                 .name(activities != null ? activities.getFileName() : UNKNOWN)
                 .size(storedFile.getSize())
                 .type(storedFile.getType())
@@ -93,7 +93,7 @@ public class FileScanListService {
                 .date(activities != null ? activities.getEventTs() : null)
                 .vtReport(convertToVtReportDto(vtReport))
                 .fileStatus(convertToFileStatusDto(fileStatus))
-                .gscan(createInnerScanDto(storedFile.getId(), hash)) // Assuming GScan info should be included
+                .gscan(createInnerScanDto(fileUpload.getId(), hash)) // Assuming GScan info should be included
                 .build();
     }
 
