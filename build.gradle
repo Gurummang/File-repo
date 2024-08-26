@@ -61,7 +61,6 @@ dependencies {
 	implementation 'org.apache.pdfbox:pdfbox:2.0.30'
 	implementation 'org.apache.tika:tika-core:2.9.0'
 	implementation 'org.apache.tika:tika-parsers:2.9.0'
-
 	implementation 'software.amazon.awssdk:s3:2.20.0'
 
 	// spotbugs

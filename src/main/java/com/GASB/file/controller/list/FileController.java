@@ -7,13 +7,11 @@ import com.GASB.file.model.dto.response.history.*;
 import com.GASB.file.model.dto.response.list.FileListResponse;
 import com.GASB.file.model.dto.response.list.ResponseDto;
 import com.GASB.file.model.entity.AdminUsers;
+import com.GASB.file.repository.file.ActivitiesRepo;
 import com.GASB.file.repository.org.AdminRepo;
 import com.GASB.file.service.dashboard.FileBoardReturnService;
 import com.GASB.file.service.filescan.FileScanListService;
-import com.GASB.file.service.history.FileHistoryService;
-import com.GASB.file.service.history.FileHistoryStatisticsService;
-import com.GASB.file.service.history.FileVisualizeService;
-import com.GASB.file.service.history.FileVisualizeTestService;
+import com.GASB.file.service.history.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -31,6 +29,7 @@ public class FileController {
     private final FileVisualizeService fileVisualizeTestService;
     private final FileScanListService fileScanListService;
     private final AdminRepo adminRepo;
+    private final ActivitiesRepo activitiesRepo;
     private static final String INVALID_JWT_MSG = "Invalid JWT: email attribute is missing.";
     private static final String ERROR = "error";
     private static final String EMAIL = "email";
@@ -38,13 +37,14 @@ public class FileController {
 
     @Autowired
     public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService,
-                          FileVisualizeService fileVisualizeTestService, FileScanListService fileScanListService, AdminRepo adminRepo){
+                          FileVisualizeService fileVisualizeTestService, FileScanListService fileScanListService, AdminRepo adminRepo, ActivitiesRepo activitiesRepo){
         this.fileBoardReturnService = fileBoardReturnService;
         this.fileHistoryService = fileHistoryService;
         this.fileHistoryStatisticsService = fileHistoryStatisticsService;
         this.fileVisualizeTestService = fileVisualizeTestService;
         this.fileScanListService = fileScanListService;
         this.adminRepo = adminRepo;
+        this.activitiesRepo = activitiesRepo;
     }
     @GetMapping
     public String hello(){
@@ -150,11 +150,16 @@ public class FileController {
             if (adminOptional.isEmpty()) {
                 return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
             }
+            AdminUsers adminUsers = adminOptional.get();
 
-            long orgId = adminOptional.get().getOrg().getId();
+            long orgId = adminUsers.getOrg().getId();
             long eventId = eventIdRequest.getEventId();
-            FileHistoryBySaaS fileHistoryBySaaS = fileVisualizeTestService.getFileHistoryBySaaS(eventId, orgId);
-            return ResponseDto.ofSuccess(fileHistoryBySaaS);
+            if(activitiesRepo.findOrgIdByActivityId(eventId).equals(orgId)) {
+                FileHistoryBySaaS fileHistoryBySaaS = fileVisualizeTestService.getFileHistoryBySaaS(eventId, orgId);
+                return ResponseDto.ofSuccess(fileHistoryBySaaS);
+            } else {
+                return ResponseDto.ofFail("Invalid Request.");
+            }
         } catch (Exception e) {
             return ResponseDto.ofFail(e.getMessage());
         }
