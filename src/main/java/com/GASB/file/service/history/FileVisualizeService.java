@@ -239,7 +239,7 @@ public class FileVisualizeService {
     }
 
     private List<Activities> findAndSortActivitiesBySaasFileId(Activities activity) {
-        return activitiesRepo.findListBySaasFileId(activity.getSaasFileId())
+        return activitiesRepo.findListBySaasFileId(activity.getSaasFileId(), activity.getUser().getOrgSaaS().getId())
                 .stream()
                 .filter(a -> !a.getId().equals(activity.getId()))  // 초기 활동의 ID가 아닌 활동만 필터링
                 .sorted(Comparator.comparing(Activities::getEventTs))  // 시간 순서로 정렬

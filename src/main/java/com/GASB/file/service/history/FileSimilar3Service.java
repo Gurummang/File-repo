@@ -62,9 +62,15 @@ public class FileSimilar3Service {
                 .sorted(Comparator.comparing(FileRelationNodes::getEventTs))
                 .collect(Collectors.toList());
 
+        List<FileRelationNodes> o365Nodes = fileRelationNodesList.stream()
+                .filter(node -> "o365".equals(node.getSaas()))
+                .sorted(Comparator.comparing(FileRelationNodes::getEventTs))
+                .collect(Collectors.toList());
+
         return NodeAndSimilarity.builder()
                 .slackNodes(slackNodes) // Slack 리스트 추가
                 .googleDriveNodes(googleDriveNodes) // Google Drive 리스트 추가
+                .o365Nodes(o365Nodes)
                 .build();
     }
 }

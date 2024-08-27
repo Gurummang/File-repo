@@ -26,7 +26,7 @@ public class FileController {
     private final FileBoardReturnService fileBoardReturnService;
     private final FileHistoryService fileHistoryService;
     private final FileHistoryStatisticsService fileHistoryStatisticsService;
-    private final FileVisualizeService fileVisualizeTestService;
+    private final VisualizeService fileVisualizeTestService;
     private final FileScanListService fileScanListService;
     private final AdminRepo adminRepo;
     private final ActivitiesRepo activitiesRepo;
@@ -37,7 +37,7 @@ public class FileController {
 
     @Autowired
     public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService,
-                          FileVisualizeService fileVisualizeTestService, FileScanListService fileScanListService, AdminRepo adminRepo, ActivitiesRepo activitiesRepo){
+                          VisualizeService fileVisualizeTestService, FileScanListService fileScanListService, AdminRepo adminRepo, ActivitiesRepo activitiesRepo){
         this.fileBoardReturnService = fileBoardReturnService;
         this.fileHistoryService = fileHistoryService;
         this.fileHistoryStatisticsService = fileHistoryStatisticsService;
