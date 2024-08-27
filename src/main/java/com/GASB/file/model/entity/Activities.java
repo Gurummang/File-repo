@@ -38,6 +38,9 @@ public class Activities {
     @Column(name = "file_name", length = 255)
     private String fileName;
 
+    @Column(name = "tlsh", columnDefinition = "TEXT", nullable = false)
+    private String tlsh;
+
     @Column(name = "event_ts")
     private LocalDateTime eventTs;
 
