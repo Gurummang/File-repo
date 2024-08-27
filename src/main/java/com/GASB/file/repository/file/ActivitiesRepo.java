@@ -24,13 +24,13 @@ public interface ActivitiesRepo extends JpaRepository<Activities, Long> {
     @Query("SELECT a FROM Activities a WHERE a.user.orgSaaS.org.id = :orgId AND a.fileGroup.groupName = :groupName")
     List<Activities> findByOrgIdAndGroupName(@Param("orgId") long orgId, @Param("groupName") String groupName);
 
-    @Query("SELECT a FROM Activities a WHERE a.saasFileId = :saasFileId")
-    List<Activities> findListBySaasFileId(@Param("saasFileId") String saasFileId);
+    @Query("SELECT a FROM Activities a WHERE a.saasFileId = :saasFileId and a.user.orgSaaS.id = :orgSaasId")
+    List<Activities> findListBySaasFileId(@Param("saasFileId") String saasFileId, @Param("orgSaasId") int orgSaasId);
 
     List<Activities> findByUser_OrgSaaS_Org_Id(long orgId);
 
-    @Query("SELECT a FROM Activities a WHERE a.saasFileId IN (SELECT f.saasFileId FROM FileUpload f WHERE f.hash = :hash) AND a.eventTs IN (SELECT f.timestamp FROM FileUpload f WHERE f.hash = :hash)")
-    List<Activities> findByHash(@Param("hash") String hash);
+    @Query("SELECT a FROM Activities a WHERE a.user.orgSaaS.org.id = :orgId AND a.saasFileId IN (SELECT f.saasFileId FROM FileUpload f WHERE f.hash = :hash) AND a.eventTs IN (SELECT f.timestamp FROM FileUpload f WHERE f.hash = :hash)")
+    List<Activities> findByHash(@Param("hash") String hash, @Param("orgId") long orgId);
 
     @Query("SELECT a.user.orgSaaS.org.id FROM Activities a WHERE a.id = :activityId")
     Long findOrgIdByActivityId(@Param("activityId") long id);

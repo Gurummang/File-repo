@@ -12,10 +12,12 @@ import java.util.List;
 public class NodeAndSimilarity {
     private List<FileRelationNodes> slackNodes;
     private List<FileRelationNodes> googleDriveNodes;
+    private List<FileRelationNodes> o365Nodes;
 
-    public NodeAndSimilarity(List<FileRelationNodes> slackNodes, List<FileRelationNodes> googleDriveNodes) {
+    public NodeAndSimilarity(List<FileRelationNodes> slackNodes, List<FileRelationNodes> googleDriveNodes, List<FileRelationNodes> o365Nodes) {
         this.slackNodes = slackNodes;
         this.googleDriveNodes = googleDriveNodes;
+        this.o365Nodes = o365Nodes;
     }
 }
 
