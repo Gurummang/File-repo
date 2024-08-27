@@ -2,17 +2,23 @@ package com.GASB.file.service.history;
 
 import com.GASB.file.model.dto.response.history.FileRelationNodes;
 import com.GASB.file.model.entity.Activities;
+import com.GASB.file.model.entity.DlpReport;
+import com.GASB.file.model.entity.StoredFile;
+import com.GASB.file.model.entity.VtReport;
 import com.GASB.file.repository.file.FileGroupRepo;
 import com.GASB.file.repository.file.FileUploadRepo;
+import com.GASB.file.repository.file.StoredFileRepo;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.text.similarity.JaroWinklerSimilarity;
 import org.apache.tika.exception.TikaException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.object.StoredProcedure;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -20,11 +26,13 @@ import java.util.concurrent.CompletableFuture;
 public class FileSimilarityAsyncService {
 
     private final FileUploadRepo fileUploadRepo;
+    private final StoredFileRepo storedFileRepo;
     private final TlshFileComparator tlshFileComparator;
 
     @Autowired
-    public FileSimilarityAsyncService(FileUploadRepo fileUploadRepo, TlshFileComparator tlshFileComparator) {
+    public FileSimilarityAsyncService(FileUploadRepo fileUploadRepo, StoredFileRepo storedFileRepo, TlshFileComparator tlshFileComparator) {
         this.fileUploadRepo = fileUploadRepo;
+        this.storedFileRepo = storedFileRepo;
         this.tlshFileComparator = tlshFileComparator;
     }
 
@@ -41,20 +49,10 @@ public class FileSimilarityAsyncService {
 //                String actFileName = noExtension(activity.getFileName());
 //                String nodeFileName = noExtension(node.getFileName());
 //                double nameSimilarity = calculateSim(actFileName, nodeFileName);
-//
-//                String actType = fileGroupRepo.findGroupTypeById(activity.getId());
-//                String cmpType = fileGroupRepo.findGroupTypeById(node.getId());
-//
-//                // 최종 유사도 계산
-//                double finalNodeSimilarity;
-//                if(actType.equals("document") && cmpType.equals("document")) {
 //                    double fileSimilarity = documentCompareService.documentSimilar(activity, node);
 //                    log.info("{} {} {}",nameSimilarity, typeSimilarity, fileSimilarity);
 //                    finalNodeSimilarity = (nameSimilarity * 0.6 + typeSimilarity * 0.4) * 0.4 + fileSimilarity * 0.6;
-//                } else {
-//                    log.info("{} {}",nameSimilarity, typeSimilarity);
-//                    finalNodeSimilarity = (nameSimilarity * 0.6) + (typeSimilarity * 0.4);
-//                }
+
 
                 double finalNodeSimilarity = tlshFileComparator.compareFiles(activity,node);
                 // 노드 생성 및 반환
@@ -115,18 +113,37 @@ public class FileSimilarityAsyncService {
     }
 
     public FileRelationNodes createFileRelationNodes(Activities activity, double similarity) {
+        String hash = getSaltedHash(activity);
+        Optional<StoredFile> storedFile = storedFileRepo.findBySaltedHash(hash);
+        StoredFile s = storedFile.orElseThrow(() -> new RuntimeException("StoredFile not found"));
+
+        Boolean dlp = Optional.ofNullable(s.getDlpReport())
+                .map(DlpReport::getDlp)
+                .orElse(false);
+
         return FileRelationNodes.builder()
                 .eventId(activity.getId())
                 .saas(activity.getUser().getOrgSaaS().getSaas().getSaasName())
                 .eventType(activity.getEventType())
                 .fileName(activity.getFileName())
-                .hash256(getSaltedHash(activity))
+                .hash256(hash)
                 .saasFileId(activity.getSaasFileId())
                 .eventTs(activity.getEventTs())
                 .email(activity.getUser().getEmail())
                 .uploadChannel(activity.getUploadChannel())
                 .similarity(similarity)
+                .dlp(dlp)
+                .threat(hasThreatLabel(s.getVtReport())) // 위에서 설정한 boolean 값 사용
                 .build();
+    }
+
+
+    public boolean hasThreatLabel(VtReport vtReport) {
+        if (vtReport == null) {
+            return false;
+        }
+
+        return !("none".equals(vtReport.getThreatLabel()));
     }
 
     private String getSaltedHash(Activities activity) {
