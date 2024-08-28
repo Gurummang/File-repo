@@ -104,6 +104,7 @@ public class VisualizeService {
         List<Activities> nodeList = activitiesRepo.findListBySaasFileId(saasFileId, orgSaasId);
         nodeList.sort(Comparator.comparing(Activities::getEventTs));
         nodes.addAll(nodeList);
+        log.info("node list : {}", nodeList);
         for (int i = 0; i < nodeList.size() - 1; i++) {
             Activities current = nodeList.get(i);
             Activities next = nodeList.get(i + 1);
