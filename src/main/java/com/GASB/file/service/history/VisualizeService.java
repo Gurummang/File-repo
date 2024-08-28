@@ -159,12 +159,12 @@ public class VisualizeService {
         log.info(groupName);
         log.info("orgID: {}", orgId);
         // 동일한 그룹에 속하는 활동들을 가져옴
-        List<Activities> sameGroups = activitiesRepo.findByOrgIdAndGroupName(orgId, groupName);
-        nodes.addAll(sameGroups);
-        sameGroups.sort(Comparator.comparing(Activities::getEventTs));
-        for (int i = 0; i < sameGroups.size() - 1; i++) {
-            Activities current = sameGroups.get(i);
-            Activities next = sameGroups.get(i + 1);
+        List<Activities> uploadGroups = activitiesRepo.findFileUploadByGroup(orgId, groupName);
+        nodes.addAll(uploadGroups);
+        uploadGroups.sort(Comparator.comparing(Activities::getEventTs));
+        for (int i = 0; i < uploadGroups.size() - 1; i++) {
+            Activities current = uploadGroups.get(i);
+            Activities next = uploadGroups.get(i + 1);
 
             // 새로운 엣지 생성
             FileRelationEdges edge = new FileRelationEdges(
@@ -175,6 +175,7 @@ public class VisualizeService {
 
             // 엣지 리스트에 추가
             edges.add(edge);
+            edgesWithSaasFileId(current, nodes, edges);
         }
     }
 
