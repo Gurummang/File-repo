@@ -59,8 +59,8 @@ public class FileHistoryStatisticsService {
 
     private List<FileHistoryStatistics> getFileHistoryStatisticsMonth(long orgId) {
         List<LocalDate> allDates = getLast30Days();
-        LocalDateTime startDateTime = allDates.get(0).atStartOfDay();
-        LocalDateTime endDateTime = allDates.get(allDates.size() - 1).atTime(LocalTime.MAX);
+        LocalDateTime startDateTime = allDates.getFirst().atStartOfDay();
+        LocalDateTime endDateTime = allDates.getLast().atTime(LocalTime.MAX);
 
         List<Object[]> results = activitiesRepo.findFileHistoryStatistics(orgId, startDateTime, endDateTime);
 

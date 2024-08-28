@@ -18,12 +18,11 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
-public class FileSimilar3Service {
+public class FileSimilarComputingService {
 
     private final FileSimilarityAsyncService fileSimilarityAsyncService;
 
-    @Autowired
-    public FileSimilar3Service(FileSimilarityAsyncService fileSimilarityAsyncService) {
+    public FileSimilarComputingService(FileSimilarityAsyncService fileSimilarityAsyncService) {
         this.fileSimilarityAsyncService = fileSimilarityAsyncService;
     }
 
@@ -31,8 +30,6 @@ public class FileSimilar3Service {
         List<CompletableFuture<FileRelationNodes>> futures = nodes.stream()
                 .map(node -> fileSimilarityAsyncService.calculateNodeSimilarity(activity, node))
                 .collect(Collectors.toList());
-
-        log.info("{}",futures);
 
         // 모든 비동기 작업이 완료될 때까지 기다리고 결과를 수집
         CompletableFuture<List<FileRelationNodes>> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
