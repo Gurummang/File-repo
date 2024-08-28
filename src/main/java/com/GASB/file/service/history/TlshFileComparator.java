@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class TlshFileComparator {
 
-    private static final int MAX_DIFF = 400;
+    private static final int MAX_DIFF = 1000;
 
     public double compareFiles(Activities act, Activities cmpAct) {
         try {
