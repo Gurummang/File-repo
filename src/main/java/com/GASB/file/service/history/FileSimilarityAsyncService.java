@@ -78,6 +78,10 @@ public class FileSimilarityAsyncService {
     }
 
     private String getSaltedHash(Activities activity) {
-        return fileUploadRepo.findHashByOrgSaaS_IdAndSaasFileId(activity.getUser().getOrgSaaS().getId(), activity.getSaasFileId(), activity.getEventTs());
+        if ("file_delete".equals(activity.getEventType())) {
+            return fileUploadRepo.findLatestHashBySaasFileId(activity.getUser().getOrgSaaS().getId(), activity.getSaasFileId());
+        } else {
+            return fileUploadRepo.findHashByOrgSaaS_IdAndSaasFileId(activity.getUser().getOrgSaaS().getId(), activity.getSaasFileId(), activity.getEventTs());
+        }
     }
 }
