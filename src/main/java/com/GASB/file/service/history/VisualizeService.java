@@ -21,9 +21,9 @@ public class VisualizeService {
     private final ActivitiesRepo activitiesRepo;
     private final FileUploadRepo fileUploadRepo;
     private final FileGroupRepo fileGroupRepo;
-    private final FileSimilar3Service fileSimilarService;
+    private final FileSimilarComputingService fileSimilarService;
 
-    public VisualizeService(ActivitiesRepo activitiesRepo, FileUploadRepo fileUploadRepo, FileGroupRepo fileGroupRepo, FileSimilar3Service fileSimilarService){
+    public VisualizeService(ActivitiesRepo activitiesRepo, FileUploadRepo fileUploadRepo, FileGroupRepo fileGroupRepo, FileSimilarComputingService fileSimilarService){
         this.activitiesRepo = activitiesRepo;
         this.fileUploadRepo = fileUploadRepo;
         this.fileGroupRepo = fileGroupRepo;
@@ -44,7 +44,7 @@ public class VisualizeService {
         Set<Activities> nodes = new HashSet<>();
         List<FileRelationEdges> edges = new ArrayList<>();
 
-        for (Activities a : sameHashNodes) {;
+        for (Activities a : sameHashNodes) {
             edgesWithSaasFileId(a, nodes, edges);
         }
 
