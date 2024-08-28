@@ -18,6 +18,13 @@ public interface ActivitiesRepo extends JpaRepository<Activities, Long> {
     @Query("SELECT a FROM Activities a WHERE a.saasFileId = :saasFileId AND a.eventType = 'file_upload'")
     Activities getActivitiesBySaaSFileId(@Param("saasFileId") String saasFileId);
 
+    @Query("SELECT a FROM Activities a " +
+            "WHERE a.user.orgSaaS.id = :orgSaaSId AND a.saasFileId = :saasFileId AND a.eventType != 'file_delete' " +
+            "AND a.eventTs = (SELECT MAX(a2.eventTs) FROM Activities a2 " +
+            "WHERE a2.user.orgSaaS.id = :orgSaaSId AND a2.saasFileId = :saasFileId AND a2.eventType != 'file_delete')")
+   Activities getFileChangeBySaaSFileId(@Param("saasFileId") String saasFileId, @Param("orgSaaSId") long orgSaaSId);
+
+
     @Query("SELECT a FROM Activities a WHERE a.saasFileId = :saasFileId AND a.eventTs = :timestamp")
     Activities findAllBySaasFileIdAndTimeStamp(@Param("saasFileId") String saasFileId, @Param("timestamp") LocalDateTime timestamp);
 
