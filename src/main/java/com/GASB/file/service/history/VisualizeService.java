@@ -125,14 +125,15 @@ public class VisualizeService {
         Map<String, List<Activities>> hashMap = new HashMap<>();
 
         for (Activities node : nodes) {
-            String hashValue = fileUploadRepo.findHashByOrgSaaS_IdAndSaasFileId(
-                    node.getUser().getOrgSaaS().getId(),
-                    node.getSaasFileId(),
-                    node.getEventTs()
-            );
+            if(!node.getEventType().equals("file_delete")){
+                String hashValue = fileUploadRepo.findHashByOrgSaaS_IdAndSaasFileId(
+                        node.getUser().getOrgSaaS().getId(),
+                        node.getSaasFileId(),
+                        node.getEventTs()
+                );
 
-            // hashMap에 해시값을 키로 그룹화
-            hashMap.computeIfAbsent(hashValue, k -> new ArrayList<>()).add(node);
+                hashMap.computeIfAbsent(hashValue, k -> new ArrayList<>()).add(node);
+            }
         }
 
         // 각 해시 그룹에서 시간 순으로 노드를 연결하여 엣지 생성
