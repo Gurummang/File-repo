@@ -37,16 +37,9 @@ public class FileSimilarityAsyncService {
     public CompletableFuture<FileRelationNodes> calculateNodeSimilarity(Activities activity, Activities node) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                if("file_delete".equals(node.getEventType())){
-                    Activities changeNode = activitiesRepo.getFileChangeBySaaSFileId(node.getSaasFileId(),node.getUser().getOrgSaaS().getId());
-                    double finalNodeSimilarity = tlshFileComparator.compareFiles(activity,changeNode);
-                    log.info("chageNode:{}",changeNode.getId());
-                    return createFileRelationNodes(node, finalNodeSimilarity);
-                } else {
-                    double finalNodeSimilarity = tlshFileComparator.compareFiles(activity,node);
-                    log.info("node:{}",node.getId());
-                    return createFileRelationNodes(node, finalNodeSimilarity);
-                }
+                double finalNodeSimilarity = tlshFileComparator.compareFiles(activity,node);
+                log.info("node:{}",node.getId());
+                return createFileRelationNodes(node, finalNodeSimilarity);
             } catch (Exception e) {
                 log.error("Error processing similarity for node: {}", node, e);
                 return null; // 에러 발생 시 null 반환
