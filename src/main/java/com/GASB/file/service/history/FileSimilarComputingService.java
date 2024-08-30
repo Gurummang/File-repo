@@ -5,7 +5,6 @@ import com.GASB.file.model.dto.response.history.NodeAndSimilarity;
 import com.GASB.file.model.entity.Activities;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.exception.TikaException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -48,7 +47,6 @@ public class FileSimilarComputingService {
 
         }
 
-        // Slack과 Google Drive 리스트로 나누기
         List<FileRelationNodes> slackNodes = fileRelationNodesList.stream()
                 .filter(node -> "slack".equals(node.getSaas()))
                 .sorted(Comparator.comparing(FileRelationNodes::getEventTs))
