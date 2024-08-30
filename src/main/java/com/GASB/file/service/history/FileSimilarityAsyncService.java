@@ -5,7 +5,6 @@ import com.GASB.file.model.entity.Activities;
 import com.GASB.file.model.entity.DlpReport;
 import com.GASB.file.model.entity.StoredFile;
 import com.GASB.file.model.entity.VtReport;
-import com.GASB.file.repository.file.ActivitiesRepo;
 import com.GASB.file.repository.file.FileUploadRepo;
 import com.GASB.file.repository.file.StoredFileRepo;
 import lombok.extern.slf4j.Slf4j;
@@ -22,14 +21,12 @@ public class FileSimilarityAsyncService {
 
     private final FileUploadRepo fileUploadRepo;
     private final StoredFileRepo storedFileRepo;
-    private final ActivitiesRepo activitiesRepo;
     private final TlshFileComparator tlshFileComparator;
 
     @Autowired
-    public FileSimilarityAsyncService(FileUploadRepo fileUploadRepo, StoredFileRepo storedFileRepo, ActivitiesRepo activitiesRepo, TlshFileComparator tlshFileComparator) {
+    public FileSimilarityAsyncService(FileUploadRepo fileUploadRepo, StoredFileRepo storedFileRepo, TlshFileComparator tlshFileComparator) {
         this.fileUploadRepo = fileUploadRepo;
         this.storedFileRepo = storedFileRepo;
-        this.activitiesRepo = activitiesRepo;
         this.tlshFileComparator = tlshFileComparator;
     }
 
