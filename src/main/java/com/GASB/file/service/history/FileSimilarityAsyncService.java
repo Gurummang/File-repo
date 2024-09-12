@@ -50,7 +50,8 @@ public class FileSimilarityAsyncService {
         StoredFile s = storedFile.orElseThrow(() -> new RuntimeException("StoredFile not found"));
 
         Boolean dlp = Optional.ofNullable(s.getDlpReport())
-                .map(DlpReport::getDlp)
+                .map(DlpReport::getInfoCnt)
+                .map(count -> count >= 1)
                 .orElse(false);
 
         return FileRelationNodes.builder()
