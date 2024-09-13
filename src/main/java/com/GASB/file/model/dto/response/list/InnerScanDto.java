@@ -12,10 +12,10 @@ import lombok.Setter;
 public class InnerScanDto {
 
     private MimeTypeDto step1;
-    private String step2;
+    private ScanTableDto step2;
 
     @Builder
-    public InnerScanDto(MimeTypeDto step1, String step2){
+    public InnerScanDto(MimeTypeDto step1, ScanTableDto step2){
         this.step1 = step1;
         this.step2 = step2;
     }
