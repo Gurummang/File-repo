@@ -14,17 +14,19 @@ import lombok.NoArgsConstructor;
 public class DlpReport {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
-    @Column(name="policy_id")
-    private int policyId;
+    @ManyToOne
+    @JoinColumn(name = "file_id", nullable = false)
+    private StoredFile storedFile; // DlpReport가 하나의 StoredFile을 참조함
 
-    @OneToOne
-    @JoinColumn(name = "file_id", nullable = false, referencedColumnName = "id")
-    private StoredFile storedFile;
+    @ManyToOne
+    @JoinColumn(name = "policy_id", nullable = false)
+    private Policy policy;
 
-    @Column(name="pii_id")
-    private int piiId;
+    @ManyToOne
+    @JoinColumn(name = "pii_id", nullable = false)
+    private Pii pii;
 
     @Column(name = "info_cnt")
     private int infoCnt;

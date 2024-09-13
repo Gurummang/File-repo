@@ -49,9 +49,9 @@ public class FileSimilarityAsyncService {
         Optional<StoredFile> storedFile = storedFileRepo.findBySaltedHash(hash);
         StoredFile s = storedFile.orElseThrow(() -> new RuntimeException("StoredFile not found"));
 
+        // DlpReport 리스트에서 infoCnt 값이 1 이상인 항목이 있는지 검사
         Boolean dlp = Optional.ofNullable(s.getDlpReport())
-                .map(DlpReport::getInfoCnt)
-                .map(count -> count >= 1)
+                .map(dlpReports -> dlpReports.stream().anyMatch(report -> report.getInfoCnt() >= 1))
                 .orElse(false);
 
         return FileRelationNodes.builder()
