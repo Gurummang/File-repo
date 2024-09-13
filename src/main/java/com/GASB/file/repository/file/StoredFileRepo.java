@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface StoredFileRepo extends JpaRepository<StoredFile, Long> {
     Optional<StoredFile> findBySaltedHash(String saltedHash);
+
 }
