@@ -134,7 +134,7 @@ public class FileScanListService {
         }
         return ScanTableDto.builder()
                 .detect(gscan.isDetected())
-                .yara(gscan.getStep2Detail())
+                .yara(gscan.getStep2Detail() != null ? gscan.getStep2Detail() : "none")
                 .build();
     }
 
