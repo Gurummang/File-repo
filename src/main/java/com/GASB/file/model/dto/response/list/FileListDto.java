@@ -19,6 +19,7 @@ public class FileListDto {
     private String path;
     private LocalDateTime date;
     private VtReportDto vtReport;
+    // private DlpReportDto dlpReport;
     private FileStatusDto fileStatus;
     private InnerScanDto gscan;
 }

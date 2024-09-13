@@ -2,10 +2,7 @@ package com.GASB.file.service.filescan;
 
 import com.GASB.file.model.dto.response.list.*;
 import com.GASB.file.model.entity.*;
-import com.GASB.file.repository.file.ActivitiesRepo;
-import com.GASB.file.repository.file.FileUploadRepo;
-import com.GASB.file.repository.file.StoredFileRepo;
-import com.GASB.file.repository.file.TypeScanRepo;
+import com.GASB.file.repository.file.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,16 +23,19 @@ public class FileScanListService {
     private final FileUploadRepo fileUploadRepo;
     private final TypeScanRepo typeScanRepo;
     private final ActivitiesRepo activitiesRepo;
+    private final GscanRepo gscanRepo;
     private final ModelMapper modelMapper;
     private static final String UNKNOWN = "Unknown";
 
     @Autowired
-    public FileScanListService(ModelMapper modelMapper, StoredFileRepo storedFileRepo, TypeScanRepo typeScanRepo, FileUploadRepo fileUploadRepo, ActivitiesRepo activitiesRepo){
+    public FileScanListService(ModelMapper modelMapper, StoredFileRepo storedFileRepo, TypeScanRepo typeScanRepo, FileUploadRepo fileUploadRepo, ActivitiesRepo activitiesRepo
+    ,GscanRepo gscanRepo){
         this.modelMapper = modelMapper;
         this.storedFileRepo = storedFileRepo;
         this.typeScanRepo = typeScanRepo;
         this.fileUploadRepo = fileUploadRepo;
         this.activitiesRepo = activitiesRepo;
+        this.gscanRepo = gscanRepo;
     }
 
     public FileListResponse getFileList(long orgId) {
@@ -43,8 +43,9 @@ public class FileScanListService {
             List<FileListDto> fileList = fetchFileList(orgId);
             int totalFiles = fileList.size();
             int malwareTotal = totalMalwareCount(orgId);
+            int dlpTotal = totalDlpCount(orgId);
 
-            return FileListResponse.of(totalFiles, totalDlpCount(orgId), malwareTotal, fileList);
+            return FileListResponse.of(totalFiles, dlpTotal, malwareTotal, fileList);
         } catch (Exception e) {
             log.error("Error retrieving file list: {}", e.getMessage(), e);
             return FileListResponse.of(0, 0, 0, Collections.emptyList());
@@ -82,6 +83,7 @@ public class FileScanListService {
         StoredFile storedFile = optionalStoredFile.get();
         VtReport vtReport = storedFile.getVtReport();
         FileStatus fileStatus = storedFile.getFileStatus();
+        // List<DlpReport> dlpReports = storedFile.getDlpReport();
 
         Activities activities = getActivities(fileUpload.getSaasFileId(), fileUpload.getTimestamp());
         if (activities == null) {
@@ -106,9 +108,11 @@ public class FileScanListService {
         TypeScan typeScan = getTypeScan(id, hash);
         MimeTypeDto mimeTypeDto = (typeScan != null) ? convertToMimeTypeDto(typeScan) : null;
 
+        Gscan gscan = getGscan(hash);
+        ScanTableDto scanTableDto = convertToScanTableDto(gscan);
         return InnerScanDto.builder()
                 .step1(mimeTypeDto)
-                .step2("null") // Assuming "null" is a placeholder
+                .step2(scanTableDto) // Assuming "null" is a placeholder
                 .build();
     }
 
@@ -120,6 +124,20 @@ public class FileScanListService {
         return typeScanRepo.findByHash(hash, id).orElse(null);
     }
 
+    private Gscan getGscan(String hash){
+        return gscanRepo.findByHash(hash);
+    }
+
+    private ScanTableDto convertToScanTableDto(Gscan gscan){
+        if(gscan == null){
+            return null;
+        }
+        return ScanTableDto.builder()
+                .detect(gscan.isDetected())
+                .yara(gscan.getStep2Detail())
+                .build();
+    }
+
     private Activities getActivities(String saasFileId, LocalDateTime timestamp) {
         Activities activities = activitiesRepo.findAllBySaasFileIdAndTimeStamp(saasFileId, timestamp);
         if (activities == null) {
@@ -127,7 +145,6 @@ public class FileScanListService {
         }
         return activities;
     }
-
 
 
     private MimeTypeDto convertToMimeTypeDto(TypeScan typeScan) {
