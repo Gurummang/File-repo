@@ -50,7 +50,7 @@ public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
             "  AND os.org.id = :orgId")
     int countSuspiciousMalwareByOrgId(@Param("orgId") Long orgId);
 
-    @Query("SELECT COUNT(fu) " +
+    @Query("SELECT COUNT(DISTINCT fu) " +
             "FROM FileUpload fu " +
             "JOIN fu.orgSaaS os " +
             "JOIN fu.storedFile sf " +
