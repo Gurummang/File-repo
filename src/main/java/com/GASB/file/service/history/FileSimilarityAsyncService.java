@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -49,10 +50,6 @@ public class FileSimilarityAsyncService {
         Optional<StoredFile> storedFile = storedFileRepo.findBySaltedHash(hash);
         StoredFile s = storedFile.orElseThrow(() -> new RuntimeException("StoredFile not found"));
 
-        // DlpReport 리스트에서 infoCnt 값이 1 이상인 항목이 있는지 검사
-        Boolean dlp = Optional.ofNullable(s.getDlpReport())
-                .map(dlpReports -> dlpReports.stream().anyMatch(report -> report.getInfoCnt() >= 1))
-                .orElse(false);
 
         return FileRelationNodes.builder()
                 .eventId(activity.getId())
@@ -65,8 +62,7 @@ public class FileSimilarityAsyncService {
                 .email(activity.getUser().getEmail())
                 .uploadChannel(activity.getUploadChannel())
                 .similarity(similarity)
-                .dlp(dlp)
-                .threat(hasThreatLabel(s.getVtReport())) // 위에서 설정한 boolean 값 사용
+                .threat(hasThreatLabel(s.getVtReport()))
                 .build();
     }
 
