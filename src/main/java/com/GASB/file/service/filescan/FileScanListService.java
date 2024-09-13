@@ -44,11 +44,16 @@ public class FileScanListService {
             int totalFiles = fileList.size();
             int malwareTotal = totalMalwareCount(orgId);
 
-            return FileListResponse.of(totalFiles, 0, malwareTotal, fileList);
+            return FileListResponse.of(totalFiles, totalDlpCount(orgId), malwareTotal, fileList);
         } catch (Exception e) {
             log.error("Error retrieving file list: {}", e.getMessage(), e);
             return FileListResponse.of(0, 0, 0, Collections.emptyList());
         }
+    }
+
+    private int totalDlpCount(long orgId) {
+        Integer count = fileUploadRepo.countDlpIssuesByOrgId(orgId);
+        return count != null ? count : 0;
     }
 
     private List<FileListDto> fetchFileList(long orgId) {
