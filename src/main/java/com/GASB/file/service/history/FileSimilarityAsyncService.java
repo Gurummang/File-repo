@@ -2,7 +2,7 @@ package com.GASB.file.service.history;
 
 import com.GASB.file.model.dto.response.history.FileRelationNodes;
 import com.GASB.file.model.entity.Activities;
-import com.GASB.file.model.entity.DlpReport;
+import com.GASB.file.model.entity.FileUpload;
 import com.GASB.file.model.entity.StoredFile;
 import com.GASB.file.model.entity.VtReport;
 import com.GASB.file.repository.file.FileUploadRepo;
@@ -50,6 +50,10 @@ public class FileSimilarityAsyncService {
         Optional<StoredFile> storedFile = storedFileRepo.findBySaltedHash(hash);
         StoredFile s = storedFile.orElseThrow(() -> new RuntimeException("StoredFile not found"));
 
+        long uploadId = 0;
+        if (!"file_delete".equals(activity.getEventType())) {
+            uploadId = fileUploadRepo.findIdByActivities(activity.getSaasFileId(), activity.getEventTs());
+        }
 
         return FileRelationNodes.builder()
                 .eventId(activity.getId())
@@ -63,8 +67,10 @@ public class FileSimilarityAsyncService {
                 .uploadChannel(activity.getUploadChannel())
                 .similarity(similarity)
                 .threat(hasThreatLabel(s.getVtReport()))
+                .dlp(isSensitive(uploadId, activity.getEventType())) // uploadId와 eventType 전달
                 .build();
     }
+
 
     public boolean hasThreatLabel(VtReport vtReport) {
         if (vtReport == null) {
@@ -81,4 +87,19 @@ public class FileSimilarityAsyncService {
             return fileUploadRepo.findHashByOrgSaaS_IdAndSaasFileId(activity.getUser().getOrgSaaS().getId(), activity.getSaasFileId(), activity.getEventTs());
         }
     }
+
+    private boolean isSensitive(long uploadId, String eventType) {
+        // uploadId가 0이거나 삭제 이벤트일 경우 바로 false 반환
+        if (uploadId == 0 || "file_delete".equals(eventType)) {
+            return false;
+        }
+
+        return fileUploadRepo.findByIdWithDlpReport(uploadId)
+                .map(FileUpload::getStoredFile)
+                .filter(storedFile -> storedFile.getDlpReport() != null)
+                .map(storedFile -> storedFile.getDlpReport().stream()
+                        .anyMatch(dlpReport -> dlpReport.getInfoCnt() >= 1))
+                .orElse(false);
+    }
+
 }
