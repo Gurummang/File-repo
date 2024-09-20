@@ -22,6 +22,6 @@ public class FileRelationNodes {
     private String email;
     private String uploadChannel;
     private double similarity;
-    // private boolean dlp;
+    private boolean dlp;
     private boolean threat;
 }
