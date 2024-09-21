@@ -7,9 +7,8 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PolicyDto {
+public class PiiDto {
 
-    private String policyName;
+    private String pii;
     private int dlpCount;
-
 }

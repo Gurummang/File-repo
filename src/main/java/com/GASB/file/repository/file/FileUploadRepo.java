@@ -2,6 +2,7 @@ package com.GASB.file.repository.file;
 
 import com.GASB.file.model.dto.response.dashboard.TotalTypeDto;
 import com.GASB.file.model.entity.FileUpload;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
@@ -94,4 +96,11 @@ public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
 
     @Query("SELECT f.hash FROM FileUpload f WHERE f.orgSaaS.id = :orgSaaSId AND f.saasFileId = :saasFileId AND f.timestamp = :eventTs")
     String findHashByOrgSaaS_IdAndSaasFileId(@Param("orgSaaSId") long orgSaaSId, @Param("saasFileId") String saasFileId, @Param("eventTs") LocalDateTime eventTs);
+
+    @EntityGraph(attributePaths = {"storedFile.dlpReport"})
+    @Query("SELECT f FROM FileUpload f WHERE f.id = :uploadId")
+    Optional<FileUpload> findByIdWithDlpReport(@Param("uploadId") long uploadId);
+
+    @Query("SELECT f.id FROM FileUpload f WHERE f.saasFileId=:saasFileId AND f.timestamp = :timestamp")
+    Long findIdByActivities(@Param("saasFileId")String saasFileId, @Param("timestamp") LocalDateTime timestamp);
 }
