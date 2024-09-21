@@ -41,7 +41,13 @@ public class FileGroupService {
             return "unknown"; // 파일 이름이 null인 경우 "unknown" 반환
         }
 
-        String extension = FilenameUtils.getExtension(fileName).toLowerCase();
+        // 파일 확장자 가져오기
+        String extension = FilenameUtils.getExtension(fileName);
+        if (extension == null) {
+            return "unknown"; // 확장자가 null인 경우 "unknown" 반환
+        }
+
+        extension = extension.toLowerCase(); // 확장자 소문자로 변환
 
         return switch (extension) {
             case "exe", "dll", "elf" -> "execute";
@@ -50,6 +56,7 @@ public class FileGroupService {
             default -> "unknown"; // 기타 확장자는 "unknown"으로 처리
         };
     }
+
 
 
     public void groupFilesAndSave(long actId) {
