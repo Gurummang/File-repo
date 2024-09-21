@@ -7,7 +7,6 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.text.similarity.JaroWinklerSimilarity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -37,9 +36,12 @@ public class FileGroupService {
         return FilenameUtils.getBaseName(fileName).toLowerCase();  // Convert to lower case for consistency
     }
 
-    // 파일의 확장자를 기반으로 그룹 유형을 결정하는 메서드
     private String determineFileType(String fileName) {
-        String extension = fileName != null ? FilenameUtils.getExtension(fileName).toLowerCase() : "";
+        if (fileName == null) {
+            return "unknown"; // 파일 이름이 null인 경우 "unknown" 반환
+        }
+
+        String extension = FilenameUtils.getExtension(fileName).toLowerCase();
 
         return switch (extension) {
             case "exe", "dll", "elf" -> "execute";
@@ -48,6 +50,7 @@ public class FileGroupService {
             default -> "unknown"; // 기타 확장자는 "unknown"으로 처리
         };
     }
+
 
     public void groupFilesAndSave(long actId) {
         // 1. 파일 ID로 Activities 객체 조회
