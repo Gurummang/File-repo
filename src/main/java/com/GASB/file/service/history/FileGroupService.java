@@ -39,7 +39,8 @@ public class FileGroupService {
 
     // 파일의 확장자를 기반으로 그룹 유형을 결정하는 메서드
     private String determineFileType(String fileName) {
-        String extension = FilenameUtils.getExtension(fileName).toLowerCase();
+        String extension = fileName != null ? FilenameUtils.getExtension(fileName).toLowerCase() : "";
+
         return switch (extension) {
             case "exe", "dll", "elf" -> "execute";
             case "jpg", "jpeg", "png", "gif", "webp", "svg" -> "image";

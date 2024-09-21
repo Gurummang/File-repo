@@ -17,27 +17,23 @@ import java.util.stream.Collectors;
 @Slf4j
 public class FileScanListService {
 
-    private final StoredFileRepo storedFileRepo;
     private final FileUploadRepo fileUploadRepo;
     private final TypeScanRepo typeScanRepo;
     private final ActivitiesRepo activitiesRepo;
     private final GscanRepo gscanRepo;
     private final DlpReportRepo dlpReportRepo;
-    private final PolicyRepo policyRepo;
     private final ModelMapper modelMapper;
     private static final String UNKNOWN = "Unknown";
 
     @Autowired
-    public FileScanListService(ModelMapper modelMapper, StoredFileRepo storedFileRepo, PolicyRepo policyRepo, TypeScanRepo typeScanRepo, DlpReportRepo dlpReportRepo, FileUploadRepo fileUploadRepo, ActivitiesRepo activitiesRepo
+    public FileScanListService(ModelMapper modelMapper, TypeScanRepo typeScanRepo, DlpReportRepo dlpReportRepo, FileUploadRepo fileUploadRepo, ActivitiesRepo activitiesRepo
     ,GscanRepo gscanRepo){
         this.modelMapper = modelMapper;
-        this.storedFileRepo = storedFileRepo;
         this.typeScanRepo = typeScanRepo;
         this.fileUploadRepo = fileUploadRepo;
         this.activitiesRepo = activitiesRepo;
         this.gscanRepo = gscanRepo;
         this.dlpReportRepo=dlpReportRepo;
-        this.policyRepo=policyRepo;
     }
 
     public FileListResponse getFileList(long orgId) {
@@ -60,37 +56,30 @@ public class FileScanListService {
     }
 
     private List<FileListDto> fetchFileList(long orgId) {
-        return fileUploadRepo.findAllByOrgId(orgId)
-                .stream()
-                .map(fileUpload -> {
-                    FileListDto dto = createFileListDto(fileUpload, orgId);
-                    if (dto == null) {
-                        log.debug("FileListDto is null for fileUpload with id: {}", fileUpload.getId());
-                    }
-                    return dto;
-                })
+        // 모든 FileUpload 및 DlpReport를 가져오기
+        List<FileUpload> fileUploads = fileUploadRepo.findAllByOrgId(orgId);
+        List<DlpReport> allDlpReports = dlpReportRepo.findAllDlpReportsByOrgId(orgId);
+
+        Map<Long, List<DlpReport>> dlpReportsMap = allDlpReports.stream()
+                .collect(Collectors.groupingBy(report -> report.getStoredFile().getId()));
+
+        return fileUploads.stream()
+                .map(fileUpload -> createFileListDto(fileUpload, dlpReportsMap.get(fileUpload.getStoredFile().getId()))) // fileUpload.getStoredFile().getId()로 가져오기
                 .filter(Objects::nonNull)
                 .toList();
     }
 
-
-    private FileListDto createFileListDto(FileUpload fileUpload, long orgId) {
+    private FileListDto createFileListDto(FileUpload fileUpload, List<DlpReport> dlpReports) {
         String hash = fileUpload.getHash();
-
-        Optional<StoredFile> optionalStoredFile = storedFileRepo.findBySaltedHash(hash);
-        if (optionalStoredFile.isEmpty()) {
-            log.debug("No StoredFile found for hash: {}", hash);
-            return null;
-        }
-        StoredFile storedFile = optionalStoredFile.get();
+        StoredFile storedFile = fileUpload.getStoredFile();
         VtReport vtReport = storedFile.getVtReport();
         FileStatus fileStatus = storedFile.getFileStatus();
-        List<DlpReport> dlpReports = dlpReportRepo.findDlpReportsByUploadIdAndOrgId(storedFile.getId(), orgId);
 
         Activities activities = getActivities(fileUpload.getSaasFileId(), fileUpload.getTimestamp());
         if (activities == null) {
             log.debug("No Activities found for fileUpload id: {}", fileUpload.getId());
         }
+
         return FileListDto.builder()
                 .id(fileUpload.getId())
                 .name(activities != null ? activities.getFileName() : UNKNOWN)
@@ -101,14 +90,14 @@ public class FileScanListService {
                 .path(activities != null ? activities.getUploadChannel() : UNKNOWN)
                 .date(activities != null ? activities.getEventTs() : null)
                 .vtReport(convertToVtReportDto(vtReport))
-                .dlpReport(convertToDlpReportDto(dlpReports))
+                .dlpReport(convertToDlpReportDto(dlpReports)) // 이미 매핑된 DlpReport 사용
                 .fileStatus(convertToFileStatusDto(fileStatus))
-                .gscan(createInnerScanDto(fileUpload.getId(), hash)) // Assuming GScan info should be included
+                .gscan(createInnerScanDto(fileUpload.getId(), hash))
                 .build();
     }
 
     private InnerScanDto createInnerScanDto(long id, String hash) {
-        TypeScan typeScan = getTypeScan(id, hash);
+        TypeScan typeScan = getTypeScan(id);
         MimeTypeDto mimeTypeDto = (typeScan != null) ? convertToMimeTypeDto(typeScan) : null;
 
         Gscan gscan = getGscan(hash);
@@ -123,8 +112,8 @@ public class FileScanListService {
         return fileUploadRepo.countVtMalwareByOrgId(orgId) + fileUploadRepo.countSuspiciousMalwareByOrgId(orgId);
     }
 
-    private TypeScan getTypeScan(long id, String hash) {
-        return typeScanRepo.findByHash(hash, id).orElse(null);
+    private TypeScan getTypeScan(long id) {
+        return typeScanRepo.findByHash(id).orElse(null);
     }
 
     private Gscan getGscan(String hash){
@@ -189,11 +178,21 @@ public class FileScanListService {
         return modelMapper.map(fileStatus, FileStatusDto.class);
     }
 
-    private DlpReportDto convertToDlpReportDto(List<DlpReport> dlpReports){
+    private DlpReportDto convertToDlpReportDto(List<DlpReport> dlpReports) {
+        if (dlpReports == null || dlpReports.isEmpty()) {
+            return DlpReportDto.builder()
+                    .totalDlp(0)
+                    .totalPolicies(0)
+                    .policies(Collections.emptyList())
+                    .comments(Collections.emptyList())
+                    .pii(Collections.emptyList())
+                    .build();
+        }
+
         return DlpReportDto.builder()
                 .totalDlp(countTotalDlp(dlpReports))
                 .totalPolicies(countTotalPolicies(dlpReports))
-                .policies(getPolicies(dlpReports)) // 정책 리스트를 필요에 맞게 추가
+                .policies(getPolicies(dlpReports))
                 .comments(getPoliciesComments(dlpReports))
                 .pii(getPiiCounts(dlpReports))
                 .build();
@@ -202,16 +201,16 @@ public class FileScanListService {
     private int countTotalPolicies(List<DlpReport> dlpReports) {
         return (int) dlpReports.stream()
                 .filter(report -> report.getInfoCnt() > 0) // infoCnt가 1 이상인 튜플만 필터링
-                .map(DlpReport::getPolicy) // 정책을 가져와서
-                .distinct() // 중복을 제거하고
-                .count(); // 개수를 셉니다
+                .map(DlpReport::getPolicy)
+                .distinct()
+                .count();
     }
 
 
     private int countTotalDlp(List<DlpReport> dlpReports) {
         return dlpReports.stream()
                 .mapToInt(DlpReport::getInfoCnt) // 모든 DlpReport의 infoCnt를 가져옵니다
-                .sum(); // 전체 합계
+                .sum();
     }
 
 
@@ -232,24 +231,24 @@ public class FileScanListService {
                             entry.getValue() // 탐지된 총 infoCnt
                     );
                 })
-                .collect(Collectors.toList()); // 최종 리스트로 변환
+                .collect(Collectors.toList());
     }
 
     private List<String> getPoliciesComments(List<DlpReport> dlpReports) {
         return dlpReports.stream()
                 .filter(report -> report.getInfoCnt() > 0) // infoCnt가 1 이상인 튜플만 필터링
-                .map(report -> report.getPolicy().getComment()) // 정책의 코멘트 가져오기
-                .distinct() // 중복 제거
-                .collect(Collectors.toList()); // 리스트로 수집
+                .map(report -> report.getPolicy().getComment())
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     private List<PiiDto> getPiiCounts(List<DlpReport> dlpReports) {
         return dlpReports.stream()
                 .collect(Collectors.groupingBy(report -> report.getPii().getContent(), // PII별로 그룹화
-                        Collectors.summingInt(DlpReport::getInfoCnt))) // 각 그룹의 infoCnt 합산
+                        Collectors.summingInt(DlpReport::getInfoCnt)))
                 .entrySet().stream()
-                .map(entry -> new PiiDto(entry.getKey(), entry.getValue())) // PiiDto 생성
-                .collect(Collectors.toList()); // 최종 리스트로 수집
+                .map(entry -> new PiiDto(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList());
     }
 
 }

@@ -46,61 +46,57 @@ public class FileController {
         this.adminRepo = adminRepo;
         this.activitiesRepo = activitiesRepo;
     }
-    @GetMapping
-    public String hello(){
-        return "Hello, file world !!";
-    }
 
     @GetMapping("/board")
     @ValidateJWT
     public ResponseDto<FileDashboardDto> fileDashboardList(HttpServletRequest servletRequest){
+        if (servletRequest.getAttribute(ERROR) != null) {
+            String errorMessage = (String) servletRequest.getAttribute(ERROR);
+            return ResponseDto.ofFail(errorMessage);
+        }
+        String email = (String) servletRequest.getAttribute(EMAIL);
+
+        if (email == null) {
+            return ResponseDto.ofFail(INVALID_JWT_MSG);
+        }
+
+        Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
+        if (adminOptional.isEmpty()) {
+            return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
+        }
+
+        long orgId = adminOptional.get().getOrg().getId();
         try {
-            if (servletRequest.getAttribute(ERROR) != null) {
-                String errorMessage = (String) servletRequest.getAttribute(ERROR);
-                return ResponseDto.ofFail(errorMessage);
-            }
-            String email = (String) servletRequest.getAttribute(EMAIL);
-
-            if (email == null) {
-                return ResponseDto.ofFail(INVALID_JWT_MSG);
-            }
-
-            Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
-            if (adminOptional.isEmpty()) {
-                return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
-            }
-
-            long orgId = adminOptional.get().getOrg().getId();
             FileDashboardDto fileDashboard = fileBoardReturnService.boardListReturn(orgId);
             return ResponseDto.ofSuccess(fileDashboard);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return ResponseDto.ofFail(e.getMessage());
+        }
     }
-}
 
     @GetMapping("/history")
     @ValidateJWT
     public ResponseDto<List<FileHistoryListDto>> fileHistoryList(HttpServletRequest servletRequest) {
+        if (servletRequest.getAttribute(ERROR) != null) {
+            String errorMessage = (String) servletRequest.getAttribute(ERROR);
+            return ResponseDto.ofFail(errorMessage);
+        }
+        String email = (String) servletRequest.getAttribute(EMAIL);
+
+        if (email == null) {
+            return ResponseDto.ofFail(INVALID_JWT_MSG);
+        }
+
+        Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
+        if (adminOptional.isEmpty()) {
+            return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
+        }
+
+        long orgId = adminOptional.get().getOrg().getId();
         try {
-            if (servletRequest.getAttribute(ERROR) != null) {
-                String errorMessage = (String) servletRequest.getAttribute(ERROR);
-                return ResponseDto.ofFail(errorMessage);
-            }
-            String email = (String) servletRequest.getAttribute(EMAIL);
-
-            if (email == null) {
-                return ResponseDto.ofFail(INVALID_JWT_MSG);
-            }
-
-            Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
-            if (adminOptional.isEmpty()) {
-                return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
-            }
-
-            long orgId = adminOptional.get().getOrg().getId();
             List<FileHistoryListDto> fileHistory = fileHistoryService.historyListReturn(orgId);
             return ResponseDto.ofSuccess(fileHistory);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             return ResponseDto.ofFail(e.getMessage());
         }
     }
@@ -108,26 +104,26 @@ public class FileController {
     @GetMapping("/history/statistics")
     @ValidateJWT
     public ResponseDto<FileHistoryTotalDto> fileHistoryStatisticsList(HttpServletRequest servletRequest){
+        if (servletRequest.getAttribute(ERROR) != null) {
+            String errorMessage = (String) servletRequest.getAttribute(ERROR);
+            return ResponseDto.ofFail(errorMessage);
+        }
+        String email = (String) servletRequest.getAttribute(EMAIL);
+
+        if (email == null) {
+            return ResponseDto.ofFail(INVALID_JWT_MSG);
+        }
+
+        Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
+        if (adminOptional.isEmpty()) {
+            return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
+        }
+
+        long orgId = adminOptional.get().getOrg().getId();
         try {
-            if (servletRequest.getAttribute(ERROR) != null) {
-                String errorMessage = (String) servletRequest.getAttribute(ERROR);
-                return ResponseDto.ofFail(errorMessage);
-            }
-            String email = (String) servletRequest.getAttribute(EMAIL);
-
-            if (email == null) {
-                return ResponseDto.ofFail(INVALID_JWT_MSG);
-            }
-
-            Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
-            if (adminOptional.isEmpty()) {
-                return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
-            }
-
-            long orgId = adminOptional.get().getOrg().getId();
             FileHistoryTotalDto fileHistoryStatistics = fileHistoryStatisticsService.eventStatistics(orgId);
             return ResponseDto.ofSuccess(fileHistoryStatistics);
-        } catch (Exception e){
+        } catch (RuntimeException e) {
             return ResponseDto.ofFail(e.getMessage());
         }
     }
@@ -135,60 +131,61 @@ public class FileController {
     @PostMapping("/history/visualize")
     @ValidateJWT
     public ResponseDto<FileHistoryBySaaS> fileHistoryVisualize(@RequestBody EventIdRequest eventIdRequest, HttpServletRequest servletRequest){
-        try {
-            if (servletRequest.getAttribute(ERROR) != null) {
-                String errorMessage = (String) servletRequest.getAttribute(ERROR);
-                return ResponseDto.ofFail(errorMessage);
-            }
-            String email = (String) servletRequest.getAttribute(EMAIL);
+        if (servletRequest.getAttribute(ERROR) != null) {
+            String errorMessage = (String) servletRequest.getAttribute(ERROR);
+            return ResponseDto.ofFail(errorMessage);
+        }
+        String email = (String) servletRequest.getAttribute(EMAIL);
 
-            if (email == null) {
-                return ResponseDto.ofFail(INVALID_JWT_MSG);
-            }
+        if (email == null) {
+            return ResponseDto.ofFail(INVALID_JWT_MSG);
+        }
 
-            Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
-            if (adminOptional.isEmpty()) {
-                return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
-            }
-            AdminUsers adminUsers = adminOptional.get();
+        Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
+        if (adminOptional.isEmpty()) {
+            return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
+        }
 
-            long orgId = adminUsers.getOrg().getId();
-            long eventId = eventIdRequest.getEventId();
-            if(activitiesRepo.findOrgIdByActivityId(eventId).equals(orgId)) {
+        long orgId = adminOptional.get().getOrg().getId();
+        long eventId = eventIdRequest.getEventId();
+
+        if (activitiesRepo.findOrgIdByActivityId(eventId).equals(orgId)) {
+            try {
                 FileHistoryBySaaS fileHistoryBySaaS = fileVisualizeTestService.getFileHistoryBySaaS(eventId, orgId);
                 return ResponseDto.ofSuccess(fileHistoryBySaaS);
-            } else {
-                return ResponseDto.ofFail("Invalid Request.");
+            } catch (RuntimeException e) {
+                return ResponseDto.ofFail(e.getMessage());
             }
-        } catch (Exception e) {
-            return ResponseDto.ofFail(e.getMessage());
+        } else {
+            return ResponseDto.ofFail("Invalid Request.");
         }
     }
 
     @GetMapping("/scan")
     @ValidateJWT
     public ResponseDto<FileListResponse> getFileList(HttpServletRequest servletRequest) {
+        if (servletRequest.getAttribute(ERROR) != null) {
+            String errorMessage = (String) servletRequest.getAttribute(ERROR);
+            return ResponseDto.ofFail(errorMessage);
+        }
+        String email = (String) servletRequest.getAttribute(EMAIL);
+
+        if (email == null) {
+            return ResponseDto.ofFail(INVALID_JWT_MSG);
+        }
+
+        Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
+        if (adminOptional.isEmpty()) {
+            return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
+        }
+
+        long orgId = adminOptional.get().getOrg().getId();
         try {
-            if (servletRequest.getAttribute(ERROR) != null) {
-                String errorMessage = (String) servletRequest.getAttribute(ERROR);
-                return ResponseDto.ofFail(errorMessage);
-            }
-            String email = (String) servletRequest.getAttribute(EMAIL);
-
-            if (email == null) {
-                return ResponseDto.ofFail(INVALID_JWT_MSG);
-            }
-
-            Optional<AdminUsers> adminOptional = adminRepo.findByEmail(email);
-            if (adminOptional.isEmpty()) {
-                return ResponseDto.ofFail(EMAIL_NOT_FOUND + email);
-            }
-
-            long orgId = adminOptional.get().getOrg().getId();
             FileListResponse fileListResponse = fileScanListService.getFileList(orgId);
             return ResponseDto.ofSuccess(fileListResponse);
-        } catch (Exception e){
+        } catch (RuntimeException e) {
             return ResponseDto.ofFail(e.getMessage());
         }
     }
 }
+

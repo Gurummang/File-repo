@@ -1,7 +1,6 @@
 package com.GASB.file.repository.file;
 
 import com.GASB.file.model.dto.response.dashboard.TotalTypeDto;
-import com.GASB.file.model.entity.DlpReport;
 import com.GASB.file.model.entity.FileUpload;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
