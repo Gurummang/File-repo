@@ -35,9 +35,9 @@ public class TlshFileComparator {
             log.info("Similarity between files: {}%", similarityPercentage);
 
             return Math.max(similarityPercentage, 0);
-        } catch (IllegalArgumentException e) {
+        } catch (RuntimeException e) {
             log.error("Error comparing files: {}", e.getMessage(), e);
-            throw new FileComparisonException("Failed to compare files", e);
+            return -999;
         }
     }
 }
