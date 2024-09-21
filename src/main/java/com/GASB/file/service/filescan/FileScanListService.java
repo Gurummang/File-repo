@@ -60,9 +60,8 @@ public class FileScanListService {
         List<FileUpload> fileUploads = fileUploadRepo.findAllByOrgId(orgId);
         List<DlpReport> allDlpReports = dlpReportRepo.findAllDlpReportsByOrgId(orgId);
 
-        // DlpReport를 uploadId로 매핑 (DlpReport에서 uploadId를 직접 접근할 수 없다면, StoredFile을 통해 매핑)
         Map<Long, List<DlpReport>> dlpReportsMap = allDlpReports.stream()
-                .collect(Collectors.groupingBy(report -> report.getStoredFile().getId())); // StoredFile ID로 매핑
+                .collect(Collectors.groupingBy(report -> report.getStoredFile().getId()));
 
         return fileUploads.stream()
                 .map(fileUpload -> createFileListDto(fileUpload, dlpReportsMap.get(fileUpload.getStoredFile().getId()))) // fileUpload.getStoredFile().getId()로 가져오기
