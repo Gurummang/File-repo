@@ -1,5 +1,6 @@
 package com.GASB.file.service.history;
 
+import com.GASB.file.exception.FileComparisonException;
 import com.GASB.file.model.entity.Activities;
 import com.GASB.file.service.tlsh.Tlsh;
 import lombok.extern.slf4j.Slf4j;
@@ -12,14 +13,14 @@ public class TlshFileComparator {
     private static final int MAX_DIFF = 1000;
 
     public double compareFiles(Activities act, Activities cmpAct) {
+        if (act.getId().equals(cmpAct.getId())) {
+            return 100;
+        }
+
+        String tlsh1Str = act.getTlsh();
+        String tlsh2Str = cmpAct.getTlsh();
+
         try {
-            if (act.getId().equals(cmpAct.getId())) {
-                return 100;
-            }
-
-            String tlsh1Str = act.getTlsh();
-            String tlsh2Str = cmpAct.getTlsh();
-
             Tlsh hash1 = Tlsh.fromTlshStr(tlsh1Str);
             Tlsh hash2 = Tlsh.fromTlshStr(tlsh2Str);
 
@@ -31,16 +32,12 @@ public class TlshFileComparator {
             double similarityPercentage = (1 - (double) diff / MAX_DIFF) * 100;
             similarityPercentage = Math.round(similarityPercentage * 100.0) / 100.0;
 
-            log.info("Similarity between files: " + similarityPercentage + "%");
+            log.info("Similarity between files: {}%", similarityPercentage);
 
-            if (similarityPercentage < 0) {
-                return 0;
-            } else {
-                return similarityPercentage;
-            }
-        } catch (Exception e) {
+            return Math.max(similarityPercentage, 0);
+        } catch (IllegalArgumentException e) {
             log.error("Error comparing files: {}", e.getMessage(), e);
-            return -999;
+            throw new FileComparisonException("Failed to compare files", e);
         }
     }
 }
