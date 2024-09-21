@@ -76,13 +76,7 @@ public class FileScanListService {
 
     private FileListDto createFileListDto(FileUpload fileUpload, long orgId) {
         String hash = fileUpload.getHash();
-
-        Optional<StoredFile> optionalStoredFile = storedFileRepo.findBySaltedHash(hash);
-        if (optionalStoredFile.isEmpty()) {
-            log.debug("No StoredFile found for hash: {}", hash);
-            return null;
-        }
-        StoredFile storedFile = optionalStoredFile.get();
+        StoredFile storedFile = fileUpload.getStoredFile();
         VtReport vtReport = storedFile.getVtReport();
         FileStatus fileStatus = storedFile.getFileStatus();
         List<DlpReport> dlpReports = dlpReportRepo.findDlpReportsByUploadIdAndOrgId(storedFile.getId(), orgId);
@@ -108,7 +102,7 @@ public class FileScanListService {
     }
 
     private InnerScanDto createInnerScanDto(long id, String hash) {
-        TypeScan typeScan = getTypeScan(id, hash);
+        TypeScan typeScan = getTypeScan(id);
         MimeTypeDto mimeTypeDto = (typeScan != null) ? convertToMimeTypeDto(typeScan) : null;
 
         Gscan gscan = getGscan(hash);
@@ -123,8 +117,8 @@ public class FileScanListService {
         return fileUploadRepo.countVtMalwareByOrgId(orgId) + fileUploadRepo.countSuspiciousMalwareByOrgId(orgId);
     }
 
-    private TypeScan getTypeScan(long id, String hash) {
-        return typeScanRepo.findByHash(hash, id).orElse(null);
+    private TypeScan getTypeScan(long id) {
+        return typeScanRepo.findByHash(id).orElse(null);
     }
 
     private Gscan getGscan(String hash){
