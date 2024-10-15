@@ -6,9 +6,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface GscanRepo extends JpaRepository<Gscan, Long> {
 
-    @Query("SELECT g FROM Gscan g WHERE g.storedFile.saltedHash = :hash")
-    Gscan findByHash(@Param("hash")String hash);
+    @Query("SELECT g FROM Gscan g WHERE g.storedFile.id IN :storedFileIds")
+    List<Gscan> findByStoredFileIds(@Param("storedFileIds") List<Long> storedFileIds);
 }

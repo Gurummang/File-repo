@@ -5,6 +5,7 @@ import com.GASB.file.model.entity.*;
 import com.GASB.file.repository.file.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.modelmapper.ModelMapper;
 
@@ -55,30 +56,61 @@ public class FileScanListService {
         return count != null ? count : 0;
     }
 
+    @Cacheable("fileUploads")
+    public List<FileUpload> findAllByOrgId(long orgId) {
+        return fileUploadRepo.findAllByOrgId(orgId);
+    }
+
+    @Cacheable("dlpReports")
+    public List<DlpReport> findAllDlpReportsByOrgId(long orgId) {
+        return dlpReportRepo.findAllDlpReportsByOrgId(orgId);
+    }
+
     private List<FileListDto> fetchFileList(long orgId) {
         // 모든 FileUpload 및 DlpReport를 가져오기
-        List<FileUpload> fileUploads = fileUploadRepo.findAllByOrgId(orgId);
-        List<DlpReport> allDlpReports = dlpReportRepo.findAllDlpReportsByOrgId(orgId);
+        List<FileUpload> fileUploads = findAllByOrgId(orgId);
+        List<DlpReport> allDlpReports = findAllDlpReportsByOrgId(orgId);
 
+        // DlpReport를 StoredFile ID를 기준으로 그룹화
         Map<Long, List<DlpReport>> dlpReportsMap = allDlpReports.stream()
                 .collect(Collectors.groupingBy(report -> report.getStoredFile().getId()));
 
-        return fileUploads.stream()
-                .map(fileUpload -> createFileListDto(fileUpload, dlpReportsMap.get(fileUpload.getStoredFile().getId()))) // fileUpload.getStoredFile().getId()로 가져오기
-                .filter(Objects::nonNull)
+        List<Long> fileUploadIds = fileUploads.stream()
+                .map(FileUpload::getId)
+                .toList();
+
+        Map<Long, TypeScan> typeScanMap = typeScanRepo.findByFileUploadIds(fileUploadIds)
+                .stream()
+                .collect(Collectors.toMap(typeScan -> typeScan.getFileUpload().getId(), typeScan -> typeScan));
+
+        List<Long> storedFileIds = fileUploads.stream()
+                .map(fileUpload -> fileUpload.getStoredFile().getId())
+                .toList();
+
+        Map<Long, Gscan> gscanMap = gscanRepo.findByStoredFileIds(storedFileIds)
+                .stream()
+                .collect(Collectors.toMap(gscan -> gscan.getStoredFile().getId(), gscan -> gscan));
+
+        return fileUploads.parallelStream()
+                .filter(fileUpload -> fileUpload.getStoredFile() != null)  // 미리 필터링// 병렬 처리
+                .map(fileUpload -> {
+                    // DlpReport와 DlpStat을 매핑하여 FileListDto 생성
+                    List<DlpReport> dlpReports = dlpReportsMap.get(fileUpload.getStoredFile().getId());
+                    DlpStat dlpStat = fileUpload.getDlpStat();
+                    Gscan gscan = gscanMap.get(fileUpload.getStoredFile().getId());
+                    StoredFile storedFile = fileUpload.getStoredFile();
+                    TypeScan typeScan = typeScanMap.get(fileUpload.getId());
+                    return createFileListDto(fileUpload, dlpReports, dlpStat, storedFile, typeScan, gscan);
+                })
                 .toList();
     }
 
-    private FileListDto createFileListDto(FileUpload fileUpload, List<DlpReport> dlpReports) {
-        String hash = fileUpload.getHash();
-        StoredFile storedFile = fileUpload.getStoredFile();
+    private FileListDto createFileListDto(FileUpload fileUpload, List<DlpReport> dlpReports, DlpStat dlpStat, StoredFile storedFile, TypeScan typeScan, Gscan gscan) {
         VtReport vtReport = storedFile.getVtReport();
         FileStatus fileStatus = storedFile.getFileStatus();
 
+        // Activities 데이터를 미리 가져오도록 수정
         Activities activities = getActivities(fileUpload.getSaasFileId(), fileUpload.getTimestamp());
-        if (activities == null) {
-            log.debug("No Activities found for fileUpload id: {}", fileUpload.getId());
-        }
 
         return FileListDto.builder()
                 .id(fileUpload.getId())
@@ -90,17 +122,15 @@ public class FileScanListService {
                 .path(activities != null ? activities.getUploadChannel() : UNKNOWN)
                 .date(activities != null ? activities.getEventTs() : null)
                 .vtReport(convertToVtReportDto(vtReport))
-                .dlpReport(convertToDlpReportDto(dlpReports)) // 이미 매핑된 DlpReport 사용
-                .fileStatus(convertToFileStatusDto(fileStatus))
-                .gscan(createInnerScanDto(fileUpload.getId(), hash))
+                .dlpReport(convertToDlpReportDto(dlpReports))  // DlpReport 데이터를 매핑
+                .fileStatus(convertToFileStatusDto(fileStatus, dlpStat))  // DlpStat을 함께 처리
+                .gscan(createInnerScanDto(typeScan, gscan))
                 .build();
     }
 
-    private InnerScanDto createInnerScanDto(long id, String hash) {
-        TypeScan typeScan = getTypeScan(id);
+    private InnerScanDto createInnerScanDto(TypeScan typeScan, Gscan gscan) {
         MimeTypeDto mimeTypeDto = (typeScan != null) ? convertToMimeTypeDto(typeScan) : null;
 
-        Gscan gscan = getGscan(hash);
         ScanTableDto scanTableDto = convertToScanTableDto(gscan);
         return InnerScanDto.builder()
                 .step1(mimeTypeDto)
@@ -110,14 +140,6 @@ public class FileScanListService {
 
     private int totalMalwareCount(long orgId) {
         return fileUploadRepo.countVtMalwareByOrgId(orgId) + fileUploadRepo.countSuspiciousMalwareByOrgId(orgId);
-    }
-
-    private TypeScan getTypeScan(long id) {
-        return typeScanRepo.findByHash(id).orElse(null);
-    }
-
-    private Gscan getGscan(String hash){
-        return gscanRepo.findByHash(hash);
     }
 
     private ScanTableDto convertToScanTableDto(Gscan gscan){
@@ -170,12 +192,16 @@ public class FileScanListService {
     }
 
 
-    private FileStatusDto convertToFileStatusDto(FileStatus fileStatus) {
+    private FileStatusDto convertToFileStatusDto(FileStatus fileStatus, DlpStat dlpStat) {
         if (fileStatus == null) {
             log.debug("FileStatus is null, cannot convert to FileStatusDto");
             return null;
         }
-        return modelMapper.map(fileStatus, FileStatusDto.class);
+        return FileStatusDto.builder()
+                .gscanStatus(fileStatus.getGscanStatus())
+                .dlpStatus(dlpStat != null ? dlpStat.getDlpStatus() : -1)
+                .vtStatus(fileStatus.getVtStatus())
+                .build();
     }
 
     private DlpReportDto convertToDlpReportDto(List<DlpReport> dlpReports) {
