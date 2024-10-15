@@ -5,6 +5,7 @@ import com.GASB.file.model.entity.*;
 import com.GASB.file.repository.file.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.modelmapper.ModelMapper;
 
@@ -55,16 +56,21 @@ public class FileScanListService {
         return count != null ? count : 0;
     }
 
+    @Cacheable("fileUploads")
+    public List<FileUpload> findAllByOrgId(long orgId) {
+        return fileUploadRepo.findAllByOrgId(orgId);
+    }
+
     private List<FileListDto> fetchFileList(long orgId) {
         // 모든 FileUpload 및 DlpReport를 가져오기
-        List<FileUpload> fileUploads = fileUploadRepo.findAllByOrgId(orgId);
+        List<FileUpload> fileUploads = findAllByOrgId(orgId);
         List<DlpReport> allDlpReports = dlpReportRepo.findAllDlpReportsByOrgId(orgId);
 
         Map<Long, List<DlpReport>> dlpReportsMap = allDlpReports.stream()
                 .collect(Collectors.groupingBy(report -> report.getStoredFile().getId()));
 
-        return fileUploads.stream()
-                .map(fileUpload -> createFileListDto(fileUpload, dlpReportsMap.get(fileUpload.getStoredFile().getId()))) // fileUpload.getStoredFile().getId()로 가져오기
+        return fileUploads.parallelStream()
+                .map(fileUpload -> createFileListDto(fileUpload, dlpReportsMap.get(fileUpload.getStoredFile().getId())))
                 .filter(Objects::nonNull)
                 .toList();
     }
