@@ -74,6 +74,7 @@ public class FileScanListService {
         StoredFile storedFile = fileUpload.getStoredFile();
         VtReport vtReport = storedFile.getVtReport();
         FileStatus fileStatus = storedFile.getFileStatus();
+        DlpStat dlpStat = fileUpload.getDlpStat();
 
         Activities activities = getActivities(fileUpload.getSaasFileId(), fileUpload.getTimestamp());
         if (activities == null) {
@@ -91,7 +92,7 @@ public class FileScanListService {
                 .date(activities != null ? activities.getEventTs() : null)
                 .vtReport(convertToVtReportDto(vtReport))
                 .dlpReport(convertToDlpReportDto(dlpReports)) // 이미 매핑된 DlpReport 사용
-                .fileStatus(convertToFileStatusDto(fileStatus))
+                .fileStatus(convertToFileStatusDto(fileStatus, dlpStat))
                 .gscan(createInnerScanDto(fileUpload.getId(), hash))
                 .build();
     }
@@ -170,12 +171,16 @@ public class FileScanListService {
     }
 
 
-    private FileStatusDto convertToFileStatusDto(FileStatus fileStatus) {
+    private FileStatusDto convertToFileStatusDto(FileStatus fileStatus, DlpStat dlpStat) {
         if (fileStatus == null) {
             log.debug("FileStatus is null, cannot convert to FileStatusDto");
             return null;
         }
-        return modelMapper.map(fileStatus, FileStatusDto.class);
+        return FileStatusDto.builder()
+                .gscanStatus(fileStatus.getGscanStatus())
+                .dlpStatus(dlpStat != null ? dlpStat.getDlpStatus() : -1)
+                .vtStatus(fileStatus.getVtStatus())
+                .build();
     }
 
     private DlpReportDto convertToDlpReportDto(List<DlpReport> dlpReports) {
