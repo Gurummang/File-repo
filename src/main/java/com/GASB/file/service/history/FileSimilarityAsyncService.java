@@ -66,14 +66,14 @@ public class FileSimilarityAsyncService {
                 .email(activity.getUser().getEmail())
                 .uploadChannel(activity.getUploadChannel())
                 .similarity(similarity)
-                .threat(hasThreatLabel(s.getVtReport()))
+                .threat(hasThreatLabel(uploadId, activity.getEventType(), s.getVtReport()))
                 .dlp(isSensitive(uploadId, activity.getEventType())) // uploadId와 eventType 전달
                 .build();
     }
 
 
-    public boolean hasThreatLabel(VtReport vtReport) {
-        if (vtReport == null) {
+    public boolean hasThreatLabel(long uploadId, String eventType, VtReport vtReport) {
+        if (vtReport == null || uploadId == 0 || "file_delete".equals(eventType)) {
             return false;
         }
 

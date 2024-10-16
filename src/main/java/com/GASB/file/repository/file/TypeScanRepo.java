@@ -6,10 +6,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
+import java.util.List;
 
 @Repository
 public interface TypeScanRepo extends JpaRepository<TypeScan, Long> {
-    @Query("SELECT ts FROM TypeScan ts JOIN ts.fileUpload fu WHERE fu.id = :uploadId")
-    Optional<TypeScan> findByHash(@Param("uploadId") long id);
+
+    @Query("SELECT t FROM TypeScan t WHERE t.fileUpload.id IN :fileUploadIds")
+    List<TypeScan> findByFileUploadIds(@Param("fileUploadIds") List<Long> fileUploadIds);
+
 }

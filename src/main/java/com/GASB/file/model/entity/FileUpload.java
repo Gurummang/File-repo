@@ -44,4 +44,7 @@ public class FileUpload {
     @JsonIgnore
     @OneToOne(mappedBy = "fileUpload", cascade = CascadeType.ALL)
     private TypeScan typeScan;
+
+    @OneToOne(mappedBy = "fileUpload", cascade = CascadeType.ALL)
+    private DlpStat dlpStat;
 }
