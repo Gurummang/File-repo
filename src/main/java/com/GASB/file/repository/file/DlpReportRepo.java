@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface DlpReportRepo extends JpaRepository<DlpReport, Long> {
@@ -17,5 +18,14 @@ public interface DlpReportRepo extends JpaRepository<DlpReport, Long> {
 
     @Query("SELECT d FROM DlpReport d JOIN d.storedFile s WHERE d.policy.orgSaaS.org.id = :orgId")
     List<DlpReport> findAllDlpReportsByOrgId(@Param("orgId") long orgId);
+
+    @Query("""
+        SELECT dr FROM DlpReport dr
+        JOIN FETCH dr.policy p
+        JOIN FETCH dr.pii
+        JOIN FETCH dr.storedFile sf
+        WHERE sf.id IN :storedFileIds
+    """)
+    List<DlpReport> findAllByStoredFileIds(@Param("storedFileIds") Set<Long> storedFileIds);
 
 }

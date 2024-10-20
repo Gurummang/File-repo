@@ -28,7 +28,7 @@ public class FileScanListService {
 
     @Autowired
     public FileScanListService(ModelMapper modelMapper, TypeScanRepo typeScanRepo, DlpReportRepo dlpReportRepo, FileUploadRepo fileUploadRepo, ActivitiesRepo activitiesRepo
-    ,GscanRepo gscanRepo){
+            ,GscanRepo gscanRepo){
         this.modelMapper = modelMapper;
         this.typeScanRepo = typeScanRepo;
         this.fileUploadRepo = fileUploadRepo;
@@ -148,8 +148,20 @@ public class FileScanListService {
         }
         return ScanTableDto.builder()
                 .detect(gscan.isDetected())
-                .yara(gscan.getStep2Detail() != null ? gscan.getStep2Detail() : "none")
+                // dict_keys(['Macro', 'malware']) 같은 값을 리스트 ["Macro", "malware"]로 변환
+                .yara(gscan.getStep2Detail() != null ? extractYaraList(gscan.getStep2Detail()) : Collections.emptyList())
                 .build();
+    }
+
+    // YARA 규칙을 리스트로 추출하는 헬퍼 메서드 추가
+    private List<String> extractYaraList(String step2Detail) {
+        // step2Detail이 dict_keys(['Macro', 'malware']) 형식으로 되어 있을 때, '[]'와 따옴표를 제거하고 ','로 나누어 리스트로 변환
+        String cleaned = step2Detail.replace("dict_keys([", "").replace("])", "");
+
+        // ',' 기준으로 나눈 후, 각 요소에서 불필요한 작은 따옴표를 제거
+        return Arrays.stream(cleaned.split(",\\s*"))
+                .map(s -> s.replace("'", "")) // 작은 따옴표 제거
+                .collect(Collectors.toList()); // 리스트로 변환
     }
 
     private Activities getActivities(String saasFileId, LocalDateTime timestamp) {

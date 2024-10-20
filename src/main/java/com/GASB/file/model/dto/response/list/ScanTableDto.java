@@ -2,6 +2,8 @@ package com.GASB.file.model.dto.response.list;
 
 import lombok.*;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -10,5 +12,5 @@ import lombok.*;
 public class ScanTableDto {
 
     private boolean detect;
-    private String yara;
+    private List<String> yara;
 }
