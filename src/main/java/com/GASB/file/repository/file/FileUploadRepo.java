@@ -1,6 +1,7 @@
 package com.GASB.file.repository.file;
 
 import com.GASB.file.model.dto.response.dashboard.TotalTypeDto;
+import com.GASB.file.model.dto.response.list.FileScanDto;
 import com.GASB.file.model.entity.FileUpload;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -103,4 +104,24 @@ public interface FileUploadRepo extends JpaRepository<FileUpload, Long> {
 
     @Query("SELECT f.id FROM FileUpload f WHERE f.saasFileId=:saasFileId AND f.timestamp = :timestamp")
     Long findIdByActivities(@Param("saasFileId")String saasFileId, @Param("timestamp") LocalDateTime timestamp);
+
+
+
+    @Query("SELECT new com.GASB.file.model.dto.response.list.FileScanDto("
+            + "fu.id, fu.saasFileId, fu.timestamp, "
+            + "sf.id, sf.saltedHash, sf.size, sf.type, "
+            + "d.dlpStatus, fs.vtStatus, fs.gscanStatus, "
+            + "ts.correct, ts.mimetype, ts.signature, ts.extension, "
+            + "vr.type, vr.v3, vr.alyac, vr.kaspersky, vr.falcon, vr.avast, vr.sentinelone, vr.detectEngine, vr.completeEngine, vr.score, vr.threatLabel, vr.reportUrl, "
+            + "gs.detected, gs.step2Detail) "
+            + "FROM FileUpload fu "
+            + "JOIN fu.storedFile sf "
+            + "LEFT JOIN fu.dlpStat d "  // null일 수 있는 필드는 LEFT JOIN 사용
+            + "LEFT JOIN sf.fileStatus fs "  // null일 수 있는 필드는 LEFT JOIN 사용
+            + "LEFT JOIN fu.typeScan ts "  // null일 수 있는 필드는 LEFT JOIN 사용
+            + "LEFT JOIN sf.scanTable gs "  // null일 수 있는 필드는 LEFT JOIN 사용
+            + "LEFT JOIN sf.vtReport vr "  // null일 수 있는 필드는 LEFT JOIN 사용
+            + "WHERE fu.orgSaaS.org.id = :orgId and fu.deleted = false")
+    List<FileScanDto> findFileScanDetailsByOrgId(@Param("orgId") long orgId);
+
 }

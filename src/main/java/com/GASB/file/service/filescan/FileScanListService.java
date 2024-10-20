@@ -11,6 +11,9 @@ import org.modelmapper.ModelMapper;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 
@@ -25,7 +28,8 @@ public class FileScanListService {
     private final DlpReportRepo dlpReportRepo;
     private final ModelMapper modelMapper;
     private static final String UNKNOWN = "Unknown";
-
+    private final ExecutorService executor = Executors.newFixedThreadPool(10); // 스레드 풀 설정
+    private static final int BATCH_SIZE = 100;  // 배치 크기 설정
     @Autowired
     public FileScanListService(ModelMapper modelMapper, TypeScanRepo typeScanRepo, DlpReportRepo dlpReportRepo, FileUploadRepo fileUploadRepo, ActivitiesRepo activitiesRepo
             ,GscanRepo gscanRepo){
@@ -66,8 +70,7 @@ public class FileScanListService {
         return dlpReportRepo.findAllDlpReportsByOrgId(orgId);
     }
 
-    private List<FileListDto> fetchFileList(long orgId) {
-        // 모든 FileUpload 및 DlpReport를 가져오기
+    private List<FileListDto> fetchFileList(long orgId) throws Exception {
         List<FileUpload> fileUploads = findAllByOrgId(orgId);
         List<DlpReport> allDlpReports = findAllDlpReportsByOrgId(orgId);
 
@@ -91,18 +94,38 @@ public class FileScanListService {
                 .stream()
                 .collect(Collectors.toMap(gscan -> gscan.getStoredFile().getId(), gscan -> gscan));
 
-        return fileUploads.parallelStream()
-                .filter(fileUpload -> fileUpload.getStoredFile() != null)  // 미리 필터링// 병렬 처리
-                .map(fileUpload -> {
-                    // DlpReport와 DlpStat을 매핑하여 FileListDto 생성
-                    List<DlpReport> dlpReports = dlpReportsMap.get(fileUpload.getStoredFile().getId());
-                    DlpStat dlpStat = fileUpload.getDlpStat();
-                    Gscan gscan = gscanMap.get(fileUpload.getStoredFile().getId());
-                    StoredFile storedFile = fileUpload.getStoredFile();
-                    TypeScan typeScan = typeScanMap.get(fileUpload.getId());
-                    return createFileListDto(fileUpload, dlpReports, dlpStat, storedFile, typeScan, gscan);
-                })
-                .toList();
+        // 배치 처리
+        List<FileListDto> resultList = new ArrayList<>();
+        for (int i = 0; i < fileUploads.size(); i += BATCH_SIZE) {
+            List<FileUpload> batch = fileUploads.subList(i, Math.min(i + BATCH_SIZE, fileUploads.size()));
+            resultList.addAll(processBatch(batch, dlpReportsMap, typeScanMap, gscanMap));  // 배치 단위로 처리
+        }
+
+        return resultList;
+    }
+
+    // 배치 처리 메서드
+    private List<FileListDto> processBatch(List<FileUpload> batch, Map<Long, List<DlpReport>> dlpReportsMap, Map<Long, TypeScan> typeScanMap, Map<Long, Gscan> gscanMap) throws Exception {
+        List<Future<FileListDto>> futures = new ArrayList<>();
+
+        for (FileUpload fileUpload : batch) {
+            futures.add(executor.submit(() -> {
+                List<DlpReport> dlpReports = dlpReportsMap.get(fileUpload.getStoredFile().getId());
+                DlpStat dlpStat = fileUpload.getDlpStat();
+                Gscan gscan = gscanMap.get(fileUpload.getStoredFile().getId());
+                StoredFile storedFile = fileUpload.getStoredFile();
+                TypeScan typeScan = typeScanMap.get(fileUpload.getId());
+                return createFileListDto(fileUpload, dlpReports, dlpStat, storedFile, typeScan, gscan);
+            }));
+        }
+
+        // Future의 결과를 가져오고 리스트에 추가
+        List<FileListDto> resultList = new ArrayList<>();
+        for (Future<FileListDto> future : futures) {
+            resultList.add(future.get());  // 작업이 완료될 때까지 기다림
+        }
+
+        return resultList;
     }
 
     private FileListDto createFileListDto(FileUpload fileUpload, List<DlpReport> dlpReports, DlpStat dlpStat, StoredFile storedFile, TypeScan typeScan, Gscan gscan) {

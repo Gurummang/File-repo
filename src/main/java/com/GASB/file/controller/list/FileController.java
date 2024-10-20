@@ -11,6 +11,7 @@ import com.GASB.file.repository.file.ActivitiesRepo;
 import com.GASB.file.repository.org.AdminRepo;
 import com.GASB.file.service.dashboard.FileBoardReturnService;
 import com.GASB.file.service.filescan.FileScanListService;
+import com.GASB.file.service.filescan.TestService;
 import com.GASB.file.service.history.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,7 @@ public class FileController {
     private final FileHistoryStatisticsService fileHistoryStatisticsService;
     private final VisualizeService fileVisualizeTestService;
     private final FileScanListService fileScanListService;
+    private final TestService testService;
     private final AdminRepo adminRepo;
     private final ActivitiesRepo activitiesRepo;
     private static final String INVALID_JWT_MSG = "Invalid JWT: email attribute is missing.";
@@ -36,7 +38,7 @@ public class FileController {
     private static final String EMAIL_NOT_FOUND = "Admin not found with email: ";
 
     @Autowired
-    public FileController(FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService,
+    public FileController(TestService testService, FileBoardReturnService fileBoardReturnService, FileHistoryService fileHistoryService, FileHistoryStatisticsService fileHistoryStatisticsService,
                           VisualizeService fileVisualizeTestService, FileScanListService fileScanListService, AdminRepo adminRepo, ActivitiesRepo activitiesRepo){
         this.fileBoardReturnService = fileBoardReturnService;
         this.fileHistoryService = fileHistoryService;
@@ -45,6 +47,7 @@ public class FileController {
         this.fileScanListService = fileScanListService;
         this.adminRepo = adminRepo;
         this.activitiesRepo = activitiesRepo;
+        this.testService = testService;
     }
 
     @GetMapping("/board")
@@ -181,7 +184,7 @@ public class FileController {
 
         long orgId = adminOptional.get().getOrg().getId();
         try {
-            FileListResponse fileListResponse = fileScanListService.getFileList(orgId);
+            FileListResponse fileListResponse = testService.getFileList(orgId);
             return ResponseDto.ofSuccess(fileListResponse);
         } catch (RuntimeException e) {
             return ResponseDto.ofFail(e.getMessage());
