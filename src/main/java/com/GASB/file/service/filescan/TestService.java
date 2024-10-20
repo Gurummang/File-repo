@@ -154,7 +154,7 @@ public class TestService {
     }
 
     private VtReportDto convertToVtReportDto(FileScanDto fileScanDto) {
-        if (fileScanDto.getVtType() == null && fileScanDto.getHash() == null && fileScanDto.getV3() == null
+        if (fileScanDto.getVtType() == null && fileScanDto.getV3() == null
                 && fileScanDto.getAlyac() == null && fileScanDto.getKaspersky() == null && fileScanDto.getFalcon() == null
                 && fileScanDto.getAvast() == null && fileScanDto.getSentinelone() == null && fileScanDto.getDetectEngine() == null
                 && fileScanDto.getCompleteEngine() == null && fileScanDto.getScore() == null && fileScanDto.getThreatLabel() == null
