@@ -183,19 +183,14 @@ public class TestService {
 
 
     private FileStatusDto convertToFileStatusDto(FileScanDto fileScanDto) {
-        if (fileScanDto.getGscanStatus() == null && fileScanDto.getDlpStatus() == null && fileScanDto.getVtStatus() == null){
-            return FileStatusDto.builder()
-                    .gscanStatus(-1)
-                    .dlpStatus(-1)
-                    .vtStatus(-1)
-                    .build();
-        }
+        // null 체크 및 기본값 -1 설정
         return FileStatusDto.builder()
-                .gscanStatus(fileScanDto.getGscanStatus())
-                .dlpStatus(fileScanDto.getDlpStatus())
-                .vtStatus(fileScanDto.getVtStatus())
+                .gscanStatus(fileScanDto.getGscanStatus() != null ? fileScanDto.getGscanStatus() : -1)  // 기본값 -1 설정
+                .dlpStatus(fileScanDto.getDlpStatus() != null ? fileScanDto.getDlpStatus() : -1)  // 기본값 -1 설정
+                .vtStatus(fileScanDto.getVtStatus() != null ? fileScanDto.getVtStatus() : -1)  // 기본값 -1 설정
                 .build();
     }
+
 
     private Activities getActivities(String saasFileId, LocalDateTime timestamp) {
         Activities activities = activitiesRepo.findAllBySaasFileIdAndTimeStamp(saasFileId, timestamp);
