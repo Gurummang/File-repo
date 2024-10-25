@@ -3,6 +3,7 @@ package com.GASB.file.service.history;
 import com.GASB.file.model.entity.*;
 import com.GASB.file.repository.file.ActivitiesRepo;
 import com.GASB.file.repository.file.FileGroupRepo;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.text.similarity.JaroWinklerSimilarity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class FileGroupService {
 
     private static final double SIM_THRESHOLD = 0.8;
@@ -61,8 +63,13 @@ public class FileGroupService {
 
     public void groupFilesAndSave(long actId) {
         // 1. 파일 ID로 Activities 객체 조회
-        Activities activity = activitiesRepo.findById(actId)
-                .orElseThrow(() -> new RuntimeException("Activity not found"));
+        Optional<Activities> activityOptional = activitiesRepo.findById(actId);
+        if(activityOptional.isEmpty()){
+            log.info("Activitiy is null for activityId:{}", actId);
+            return;
+        }
+
+        Activities activity = activityOptional.get();
 
         // 2. 현재 검사 주체의 파일 이름과 확장자
         String actFileName = getFileNameWithoutExtension(activity.getFileName());
