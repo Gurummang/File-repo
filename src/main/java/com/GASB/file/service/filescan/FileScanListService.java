@@ -2,12 +2,13 @@ package com.GASB.file.service.filescan;
 
 import com.GASB.file.model.dto.response.list.*;
 import com.GASB.file.model.entity.*;
-import com.GASB.file.repository.file.*;
+import com.GASB.file.repository.file.ActivitiesRepo;
+import com.GASB.file.repository.file.DlpReportRepo;
+import com.GASB.file.repository.file.FileUploadRepo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.modelmapper.ModelMapper;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -16,34 +17,30 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
-
 @Service
 @Slf4j
 public class FileScanListService {
 
     private final FileUploadRepo fileUploadRepo;
-    private final TypeScanRepo typeScanRepo;
+    private final DlpReportRepo dlpReportRepo; // DlpReportRepo 추가
     private final ActivitiesRepo activitiesRepo;
-    private final GscanRepo gscanRepo;
-    private final DlpReportRepo dlpReportRepo;
-    private final ModelMapper modelMapper;
     private static final String UNKNOWN = "Unknown";
-    private final ExecutorService executor = Executors.newFixedThreadPool(10); // 스레드 풀 설정
     private static final int BATCH_SIZE = 100;  // 배치 크기 설정
+    private final ExecutorService executor = Executors.newFixedThreadPool(10); // 스레드 풀 설정
+
     @Autowired
-    public FileScanListService(ModelMapper modelMapper, TypeScanRepo typeScanRepo, DlpReportRepo dlpReportRepo, FileUploadRepo fileUploadRepo, ActivitiesRepo activitiesRepo
-            ,GscanRepo gscanRepo){
-        this.modelMapper = modelMapper;
-        this.typeScanRepo = typeScanRepo;
+    public FileScanListService(FileUploadRepo fileUploadRepo, DlpReportRepo dlpReportRepo, ActivitiesRepo activitiesRepo) {
         this.fileUploadRepo = fileUploadRepo;
+        this.dlpReportRepo = dlpReportRepo;  // DlpReportRepo 주입
         this.activitiesRepo = activitiesRepo;
-        this.gscanRepo = gscanRepo;
-        this.dlpReportRepo=dlpReportRepo;
     }
 
     public FileListResponse getFileList(long orgId) {
         try {
-            List<FileListDto> fileList = fetchFileList(orgId);
+            // DlpReport 데이터를 미리 가져오기
+            List<DlpReport> allDlpReports = findAllDlpReportsByOrgId(orgId);
+
+            List<FileListDto> fileList = fetchFileList(orgId, allDlpReports);  // DlpReport 리스트 전달
             int totalFiles = fileList.size();
             int malwareTotal = totalMalwareCount(orgId);
             int dlpTotal = totalDlpCount(orgId);
@@ -51,72 +48,32 @@ public class FileScanListService {
             return FileListResponse.of(totalFiles, dlpTotal, malwareTotal, fileList);
         } catch (Exception e) {
             log.error("Error retrieving file list: {}", e.getMessage(), e);
-            return FileListResponse.of(0, 0, 0, Collections.emptyList());
+            return FileListResponse.of(0, 0, 0, List.of());
         }
     }
 
-    private int totalDlpCount(long orgId) {
-        Integer count = fileUploadRepo.countDlpIssuesByOrgId(orgId);
-        return count != null ? count : 0;
-    }
+    private List<FileListDto> fetchFileList(long orgId, List<DlpReport> allDlpReports) throws Exception {
+        List<FileScanDto> fileScanList = fileUploadRepo.findFileScanDetailsByOrgId(orgId);
 
-    @Cacheable("fileUploads")
-    public List<FileUpload> findAllByOrgId(long orgId) {
-        return fileUploadRepo.findAllByOrgId(orgId);
-    }
-
-    @Cacheable("dlpReports")
-    public List<DlpReport> findAllDlpReportsByOrgId(long orgId) {
-        return dlpReportRepo.findAllDlpReportsByOrgId(orgId);
-    }
-
-    private List<FileListDto> fetchFileList(long orgId) throws Exception {
-        List<FileUpload> fileUploads = findAllByOrgId(orgId);
-        List<DlpReport> allDlpReports = findAllDlpReportsByOrgId(orgId);
-
-        // DlpReport를 StoredFile ID를 기준으로 그룹화
         Map<Long, List<DlpReport>> dlpReportsMap = allDlpReports.stream()
                 .collect(Collectors.groupingBy(report -> report.getStoredFile().getId()));
 
-        List<Long> fileUploadIds = fileUploads.stream()
-                .map(FileUpload::getId)
-                .toList();
-
-        Map<Long, TypeScan> typeScanMap = typeScanRepo.findByFileUploadIds(fileUploadIds)
-                .stream()
-                .collect(Collectors.toMap(typeScan -> typeScan.getFileUpload().getId(), typeScan -> typeScan));
-
-        List<Long> storedFileIds = fileUploads.stream()
-                .map(fileUpload -> fileUpload.getStoredFile().getId())
-                .toList();
-
-        Map<Long, Gscan> gscanMap = gscanRepo.findByStoredFileIds(storedFileIds)
-                .stream()
-                .collect(Collectors.toMap(gscan -> gscan.getStoredFile().getId(), gscan -> gscan));
-
         // 배치 처리
         List<FileListDto> resultList = new ArrayList<>();
-        for (int i = 0; i < fileUploads.size(); i += BATCH_SIZE) {
-            List<FileUpload> batch = fileUploads.subList(i, Math.min(i + BATCH_SIZE, fileUploads.size()));
-            resultList.addAll(processBatch(batch, dlpReportsMap, typeScanMap, gscanMap));  // 배치 단위로 처리
+        for (int i = 0; i < fileScanList.size(); i += BATCH_SIZE) {
+            List<FileScanDto> batch = fileScanList.subList(i, Math.min(i + BATCH_SIZE, fileScanList.size()));
+            resultList.addAll(processBatch(batch, dlpReportsMap));  // 배치 단위로 처리
         }
 
         return resultList;
     }
 
     // 배치 처리 메서드
-    private List<FileListDto> processBatch(List<FileUpload> batch, Map<Long, List<DlpReport>> dlpReportsMap, Map<Long, TypeScan> typeScanMap, Map<Long, Gscan> gscanMap) throws Exception {
+    private List<FileListDto> processBatch(List<FileScanDto> batch, Map<Long, List<DlpReport>> dlpReportsMap) throws Exception {
         List<Future<FileListDto>> futures = new ArrayList<>();
 
-        for (FileUpload fileUpload : batch) {
-            futures.add(executor.submit(() -> {
-                List<DlpReport> dlpReports = dlpReportsMap.get(fileUpload.getStoredFile().getId());
-                DlpStat dlpStat = fileUpload.getDlpStat();
-                Gscan gscan = gscanMap.get(fileUpload.getStoredFile().getId());
-                StoredFile storedFile = fileUpload.getStoredFile();
-                TypeScan typeScan = typeScanMap.get(fileUpload.getId());
-                return createFileListDto(fileUpload, dlpReports, dlpStat, storedFile, typeScan, gscan);
-            }));
+        for (FileScanDto fileScanDto : batch) {
+            futures.add(executor.submit(() -> createFileListDto(fileScanDto, dlpReportsMap)));
         }
 
         // Future의 결과를 가져오고 리스트에 추가
@@ -128,64 +85,112 @@ public class FileScanListService {
         return resultList;
     }
 
-    private FileListDto createFileListDto(FileUpload fileUpload, List<DlpReport> dlpReports, DlpStat dlpStat, StoredFile storedFile, TypeScan typeScan, Gscan gscan) {
-        VtReport vtReport = storedFile.getVtReport();
-        FileStatus fileStatus = storedFile.getFileStatus();
+    private FileListDto createFileListDto(FileScanDto fileScanDto, Map<Long, List<DlpReport>> dlpReportsMap) {
+        Activities activities = getActivities(fileScanDto.getSaasFileId(), fileScanDto.getTimestamp());
 
-        // Activities 데이터를 미리 가져오도록 수정
-        Activities activities = getActivities(fileUpload.getSaasFileId(), fileUpload.getTimestamp());
+        // DlpReport 데이터를 StoredFile ID로 가져오기
+        List<DlpReport> dlpReports = dlpReportsMap.getOrDefault(fileScanDto.getStoredFileId(), Collections.emptyList());
 
         return FileListDto.builder()
-                .id(fileUpload.getId())
+                .id(fileScanDto.getFileUploadId())
                 .name(activities != null ? activities.getFileName() : UNKNOWN)
-                .size(storedFile.getSize())
-                .type(storedFile.getType())
+                .size(fileScanDto.getSize())
+                .type(fileScanDto.getType())
                 .saas(activities != null ? activities.getUser().getOrgSaaS().getSaas().getSaasName() : UNKNOWN)
                 .user(activities != null ? activities.getUser().getUserName() : UNKNOWN)
                 .path(activities != null ? activities.getUploadChannel() : UNKNOWN)
                 .date(activities != null ? activities.getEventTs() : null)
-                .vtReport(convertToVtReportDto(vtReport))
+                .vtReport(convertToVtReportDto(fileScanDto))
                 .dlpReport(convertToDlpReportDto(dlpReports))  // DlpReport 데이터를 매핑
-                .fileStatus(convertToFileStatusDto(fileStatus, dlpStat))  // DlpStat을 함께 처리
-                .gscan(createInnerScanDto(typeScan, gscan))
+                .fileStatus(convertToFileStatusDto(fileScanDto))  // DlpStat을 함께 처리
+                .gscan(createInnerScanDto(fileScanDto))
                 .build();
     }
 
-    private InnerScanDto createInnerScanDto(TypeScan typeScan, Gscan gscan) {
-        MimeTypeDto mimeTypeDto = (typeScan != null) ? convertToMimeTypeDto(typeScan) : null;
+    @Cacheable("dlpReports")
+    public List<DlpReport> findAllDlpReportsByOrgId(long orgId) {
+        return dlpReportRepo.findAllDlpReportsByOrgId(orgId);
+    }
 
-        ScanTableDto scanTableDto = convertToScanTableDto(gscan);
+    private InnerScanDto createInnerScanDto(FileScanDto fileScanDto) {
+        MimeTypeDto mimeTypeDto = convertToMimeTypeDto(fileScanDto);
+
+        ScanTableDto scanTableDto = convertToScanTableDto(fileScanDto);
         return InnerScanDto.builder()
                 .step1(mimeTypeDto)
                 .step2(scanTableDto) // Assuming "null" is a placeholder
                 .build();
     }
 
-    private int totalMalwareCount(long orgId) {
-        return fileUploadRepo.countVtMalwareByOrgId(orgId) + fileUploadRepo.countSuspiciousMalwareByOrgId(orgId);
-    }
-
-    private ScanTableDto convertToScanTableDto(Gscan gscan){
-        if(gscan == null){
+    private ScanTableDto convertToScanTableDto(FileScanDto fileScanDto){
+        if(fileScanDto.getDetect() == null && fileScanDto.getStep2Detail() == null){
             return null;
         }
         return ScanTableDto.builder()
-                .detect(gscan.isDetected())
-                // dict_keys(['Macro', 'malware']) 같은 값을 리스트 ["Macro", "malware"]로 변환
-                .yara(gscan.getStep2Detail() != null ? extractYaraList(gscan.getStep2Detail()) : Collections.emptyList())
+                .detect(fileScanDto.getDetect())
+                .yara(fileScanDto.getStep2Detail() != null ? extractYaraList(fileScanDto.getStep2Detail()) : Collections.emptyList())
                 .build();
     }
 
-    // YARA 규칙을 리스트로 추출하는 헬퍼 메서드 추가
     private List<String> extractYaraList(String step2Detail) {
-        // step2Detail이 dict_keys(['Macro', 'malware']) 형식으로 되어 있을 때, '[]'와 따옴표를 제거하고 ','로 나누어 리스트로 변환
         String cleaned = step2Detail.replace("dict_keys([", "").replace("])", "");
 
-        // ',' 기준으로 나눈 후, 각 요소에서 불필요한 작은 따옴표를 제거
         return Arrays.stream(cleaned.split(",\\s*"))
                 .map(s -> s.replace("'", "")) // 작은 따옴표 제거
                 .collect(Collectors.toList()); // 리스트로 변환
     }
+
+    private MimeTypeDto convertToMimeTypeDto(FileScanDto fileScanDto) {
+        if (fileScanDto.getCorrect() == null && fileScanDto.getMimeType() == null
+                && fileScanDto.getSignature() == null && fileScanDto.getExtension() == null){
+            return null;
+        }
+        return MimeTypeDto.builder()
+                .correct(fileScanDto.getCorrect())
+                .mimeType(fileScanDto.getMimeType())
+                .signature(fileScanDto.getSignature())
+                .extension(fileScanDto.getExtension())
+                .build();
+    }
+
+    private VtReportDto convertToVtReportDto(FileScanDto fileScanDto) {
+        if (fileScanDto.getVtType() == null && fileScanDto.getV3() == null
+                && fileScanDto.getAlyac() == null && fileScanDto.getKaspersky() == null && fileScanDto.getFalcon() == null
+                && fileScanDto.getAvast() == null && fileScanDto.getSentinelone() == null && fileScanDto.getDetectEngine() == null
+                && fileScanDto.getCompleteEngine() == null && fileScanDto.getScore() == null && fileScanDto.getThreatLabel() == null
+                && fileScanDto.getReportUrl() == null) {
+            return null;
+        }
+
+        // 각 Integer 필드에서 null 값이 있을 경우 기본값으로 처리
+        return VtReportDto.builder()
+                .type(fileScanDto.getVtType())
+                .sha256(fileScanDto.getHash())
+                .v3(fileScanDto.getV3())
+                .alyac(fileScanDto.getAlyac())
+                .kaspersky(fileScanDto.getKaspersky())
+                .falcon(fileScanDto.getFalcon())
+                .avast(fileScanDto.getAvast())
+                .sentinelone(fileScanDto.getSentinelone())
+                .detectEngine(fileScanDto.getDetectEngine() != null ? fileScanDto.getDetectEngine() : 0)  // 기본값 0 설정
+                .completeEngine(fileScanDto.getCompleteEngine() != null ? fileScanDto.getCompleteEngine() : 0)  // 기본값 0 설정
+                .score(fileScanDto.getScore() != null ? fileScanDto.getScore() : 0)  // 기본값 0 설정
+                .threatLabel(fileScanDto.getThreatLabel())
+                .reportUrl(fileScanDto.getReportUrl())
+                .build();
+    }
+
+
+
+    private FileStatusDto convertToFileStatusDto(FileScanDto fileScanDto) {
+        // null 체크 및 기본값 -1 설정
+        return FileStatusDto.builder()
+                .gscanStatus(fileScanDto.getGscanStatus() != null ? fileScanDto.getGscanStatus() : -1)  // 기본값 -1 설정
+                .dlpStatus(fileScanDto.getDlpStatus() != null ? fileScanDto.getDlpStatus() : -1)  // 기본값 -1 설정
+                .vtStatus(fileScanDto.getVtStatus() != null ? fileScanDto.getVtStatus() : -1)  // 기본값 -1 설정
+                .build();
+    }
+
 
     private Activities getActivities(String saasFileId, LocalDateTime timestamp) {
         Activities activities = activitiesRepo.findAllBySaasFileIdAndTimeStamp(saasFileId, timestamp);
@@ -195,48 +200,12 @@ public class FileScanListService {
         return activities;
     }
 
-
-    private MimeTypeDto convertToMimeTypeDto(TypeScan typeScan) {
-        if (typeScan == null) {
-            log.debug("TypeScan is null, cannot convert to MimeTypeDto");
-            return null;
-        }
-        return modelMapper.map(typeScan, MimeTypeDto.class);
+    private int totalMalwareCount(long orgId) {
+        return fileUploadRepo.countVtMalwareByOrgId(orgId) + fileUploadRepo.countSuspiciousMalwareByOrgId(orgId);
     }
 
-    private VtReportDto convertToVtReportDto(VtReport vtReport) {
-        if (vtReport == null) {
-            return null;
-        }
-
-        return VtReportDto.builder()
-                .type(vtReport.getType())
-                .sha256(vtReport.getStoredFile().getSaltedHash())  // StoredFile에서 sha256을 가져옴
-                .v3(vtReport.getV3())
-                .alyac(vtReport.getAlyac())
-                .kaspersky(vtReport.getKaspersky())
-                .falcon(vtReport.getFalcon())
-                .avast(vtReport.getAvast())
-                .sentinelone(vtReport.getSentinelone())
-                .detectEngine(vtReport.getDetectEngine())
-                .completeEngine(vtReport.getCompleteEngine())
-                .score(vtReport.getScore())
-                .threatLabel(vtReport.getThreatLabel())
-                .reportUrl(vtReport.getReportUrl())
-                .build();
-    }
-
-
-    private FileStatusDto convertToFileStatusDto(FileStatus fileStatus, DlpStat dlpStat) {
-        if (fileStatus == null) {
-            log.debug("FileStatus is null, cannot convert to FileStatusDto");
-            return null;
-        }
-        return FileStatusDto.builder()
-                .gscanStatus(fileStatus.getGscanStatus())
-                .dlpStatus(dlpStat != null ? dlpStat.getDlpStatus() : -1)
-                .vtStatus(fileStatus.getVtStatus())
-                .build();
+    private int totalDlpCount(long orgId) {
+        return fileUploadRepo.countDlpIssuesByOrgId(orgId);
     }
 
     private DlpReportDto convertToDlpReportDto(List<DlpReport> dlpReports) {
@@ -259,6 +228,12 @@ public class FileScanListService {
                 .build();
     }
 
+    private int countTotalDlp(List<DlpReport> dlpReports) {
+        return dlpReports.stream()
+                .mapToInt(DlpReport::getInfoCnt) // 모든 DlpReport의 infoCnt를 가져옵니다
+                .sum();
+    }
+
     private int countTotalPolicies(List<DlpReport> dlpReports) {
         return (int) dlpReports.stream()
                 .filter(report -> report.getInfoCnt() > 0) // infoCnt가 1 이상인 튜플만 필터링
@@ -266,14 +241,6 @@ public class FileScanListService {
                 .distinct()
                 .count();
     }
-
-
-    private int countTotalDlp(List<DlpReport> dlpReports) {
-        return dlpReports.stream()
-                .mapToInt(DlpReport::getInfoCnt) // 모든 DlpReport의 infoCnt를 가져옵니다
-                .sum();
-    }
-
 
     private List<PolicyDto> getPolicies(List<DlpReport> dlpReports) {
         return dlpReports.stream()
@@ -316,5 +283,4 @@ public class FileScanListService {
                 .map(entry -> new PiiDto(entry.getKey(), entry.getValue()))
                 .collect(Collectors.toList());
     }
-
 }
