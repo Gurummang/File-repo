@@ -305,8 +305,13 @@ public class FileScanListService {
 
     private List<PiiDto> getPiiCounts(List<DlpReport> dlpReports) {
         return dlpReports.stream()
-                .collect(Collectors.groupingBy(report -> report.getPii().getContent(), // PII별로 그룹화
-                        Collectors.summingInt(DlpReport::getInfoCnt)))
+                .collect(Collectors.groupingBy(
+                        report -> report.getPii().getContent(), // PII별로 그룹화
+                        Collectors.collectingAndThen(
+                                Collectors.maxBy(Comparator.comparingInt(DlpReport::getInfoCnt)),
+                                optionalReport -> optionalReport.map(DlpReport::getInfoCnt).orElse(0)
+                        )
+                ))
                 .entrySet().stream()
                 .map(entry -> new PiiDto(entry.getKey(), entry.getValue()))
                 .collect(Collectors.toList());
